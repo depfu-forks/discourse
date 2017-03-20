@@ -31,7 +31,7 @@ export default {
         });
       }
 
-      console.log(user.notification_channel_position);
+      console.log(user);
 
       bus.subscribe(`/notification/${user.get('id')}`, data => {
         const store = container.lookup('store:main');
