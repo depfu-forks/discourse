@@ -31,6 +31,8 @@ export default {
         });
       }
 
+      console.log(user.notification_channel_position);
+
       bus.subscribe(`/notification/${user.get('id')}`, data => {
         const store = container.lookup('store:main');
         const appEvents = container.lookup('app-events:main');
