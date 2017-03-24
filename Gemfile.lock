@@ -269,7 +269,7 @@ GEM
     rake (11.2.2)
     rake-compiler (0.9.9)
       rake
-    rb-fsevent (0.9.7)
+    rb-fsevent (0.9.8)
     rb-inotify (0.9.7)
       ffi (>= 0.5.0)
     rbtrace (0.4.8)
