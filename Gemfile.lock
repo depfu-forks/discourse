@@ -158,7 +158,7 @@ GEM
     minitest (5.9.1)
     mocha (1.1.0)
       metaclass (~> 0.0.1)
-    mock_redis (0.15.4)
+    mock_redis (0.17.2)
     moneta (0.8.1)
     msgpack (1.0.2)
     multi_json (1.12.1)
