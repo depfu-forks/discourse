@@ -130,7 +130,7 @@ group :test, :development do
   gem 'listen', '0.7.3', require: false
   gem 'certified', require: false
   # later appears to break Fabricate(:topic, category: category)
-  gem 'fabrication', '2.9.8', require: false
+  gem 'fabrication', '2.16.1', require: false
   gem 'discourse-qunit-rails', require: 'qunit-rails'
   gem 'mocha', require: false
   gem 'rb-fsevent', require: RUBY_PLATFORM =~ /darwin/i ? 'rb-fsevent' : false
