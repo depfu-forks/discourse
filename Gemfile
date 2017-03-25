@@ -46,7 +46,7 @@ gem 'http_accept_language', '~>2.0.5', require: false
 
 gem 'ember-rails', '0.18.5'
 gem 'ember-source', '2.10.0'
-gem 'ember-handlebars-template', '0.7.5'
+gem 'ember-handlebars-template', '0.8.0'
 gem 'barber'
 gem 'babel-transpiler'
 
