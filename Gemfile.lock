@@ -52,7 +52,7 @@ GEM
     babel-transpiler (0.7.0)
       babel-source (>= 4.0, < 6)
       execjs (~> 2.0)
-    barber (0.11.2)
+    barber (0.11.3)
       ember-source (>= 1.0, < 3)
       execjs (>= 1.2, < 3)
     better_errors (2.1.1)
