@@ -15,6 +15,7 @@ export default RestModel.extend({
   loadingAbove: null,
   loadingBelow: null,
   loadingFilter: null,
+  loadingNearPost: null,
   stagingPost: null,
   postsWithPlaceholders: null,
   timelineLookup: null,
@@ -206,6 +207,7 @@ export default RestModel.extend({
 
     // TODO: if we have all the posts in the filter, don't go to the server for them.
     this.set('loadingFilter', true);
+    this.set('loadingNearPost', opts.nearPost);
 
     opts = _.merge(opts, this.get('streamFilters'));
 
@@ -216,6 +218,8 @@ export default RestModel.extend({
     }).catch(result => {
       this.errorLoading(result);
       throw result;
+    }).finally(() => {
+      this.set('loadingNearPost', null);
     });
   },
 
@@ -444,11 +448,18 @@ export default RestModel.extend({
     return this._identityMap[id];
   },
 
-  loadPost(postId){
+  loadPost(postId) {
     const url = "/posts/" + postId;
     const store = this.store;
+    const existing = this._identityMap[postId];
 
-    return ajax(url).then(p => this.storePost(store.createRecord('post', p)));
+    return ajax(url).then(p => {
+      if (existing) {
+        p.cooked = existing.cooked;
+      }
+
+      return this.storePost(store.createRecord('post', p));
+    });
   },
 
   /**
@@ -527,7 +538,7 @@ export default RestModel.extend({
   triggerDeletedPost(postId){
     const existing = this._identityMap[postId];
 
-    if (existing) {
+    if (existing && !existing.deleted_at) {
       const url = "/posts/" + postId;
       const store = this.store;
 
@@ -540,7 +551,9 @@ export default RestModel.extend({
     return Ember.RSVP.Promise.resolve();
   },
 
-  triggerChangedPost(postId, updatedAt) {
+  triggerChangedPost(postId, updatedAt, opts) {
+    opts = opts || {};
+
     const resolved = Ember.RSVP.Promise.resolve();
     if (!postId) { return resolved; }
 
@@ -548,7 +561,13 @@ export default RestModel.extend({
     if (existing && existing.updated_at !== updatedAt) {
       const url = "/posts/" + postId;
       const store = this.store;
-      return ajax(url).then(p => this.storePost(store.createRecord('post', p)));
+      return ajax(url).then(p => {
+        if (opts.preserveCooked) {
+          p.cooked = existing.get('cooked');
+        }
+
+        this.storePost(store.createRecord('post', p));
+      });
     }
     return resolved;
   },
@@ -722,6 +741,11 @@ export default RestModel.extend({
     const store = this.store;
     return ajax(url, {data}).then(result => {
       const posts = Ember.get(result, "post_stream.posts");
+
+      if (result.suggested_topics) {
+        this.set('topic.suggested_topics', result.suggested_topics);
+      }
+
       if (posts) {
         posts.forEach(p => this.storePost(store.createRecord('post', p)));
       }

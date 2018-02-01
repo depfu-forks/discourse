@@ -10,18 +10,8 @@
 
 // Hardcode to be the same as before for now. I would recommend not using bootbox, or finding a way so the html structure can be the same
 .bootbox.modal {
-  position: fixed;
   top: 10%;
-  z-index: 1050;
-  overflow: auto;
   width: 100%;
-  height: auto;
-  background-color: $secondary;
-  border: 1px solid rgba(0, 0, 0, 0.3);
-
-  @include border-radius-all (6px);
-  box-shadow: 0 3px 7px rgba(0,0,0, 0.3);
-  background-clip: padding-box;
 }
 
 .modal.fade {
@@ -34,38 +24,32 @@
 .modal-body {
   overflow-y: auto;
   max-height: 400px;
-  padding: 10px 0 10px 10px;
-  width: 95%;
+  padding: 10px;
 }
 
 // we need a little extra room on mobile for the
 // stuff inside the footer to fit
 .modal-footer {
-  padding-right: 0;
+  padding: 15px 7px 10px 7px;
 }
 
-.modal-footer .btn + .btn {
-  margin-right: 5px;
-  margin-bottom: 5px;
+.modal-close {
+  display: inline-block;
+  float: right;
 }
 
 .modal-header {
-  // we need tighter spacing on mobile for header
-  // this clearfix under the modal title h3 pushes it way down
-  .clearfix {
-    display:none;
-  }
+  padding: 10px 0 10px 10px;
+
   h3 {
-    font-size: 1.286em;
-    padding-left: 15px;
-    margin-bottom: 5px;
+    display: inline;
+    font-size: $font-up-2;
+    margin: 0;
   }
 }
 .close {
-  float: right;
-  font-size: 1.714em;
+  font-size: $font-up-4;
   padding: 10px 15px 5px 5px;
-  margin: -15px 0 0 0;
   color: $primary;
 }
 
@@ -91,20 +75,22 @@
       width: 100%;
     }
   }
-
-  .category-combobox {
-    width: 100%;
-  }
 }
 
 .flag-modal {
   max-height: 450px;
 }
 
+@media only screen and (max-device-width: 568px) {
+  .modal .flag-modal .flag-message {
+    height: 1.2em;
+  }
+}
+
 .custom-message-length {
-  margin: -10px 0 10px 20px;
-  color: dark-light-choose(scale-color($primary, $lightness: 30%), scale-color($secondary, $lightness: 70%));
-  font-size: 85%;
+  margin: -4px 0 10px 20px;
+  color: dark-light-choose($primary-high, $secondary-low);
+  font-size: $font-down-1;
 }
 
 .flag-message {
@@ -114,6 +100,7 @@
 
 .edit-category-modal {
   .modal-body {
+    box-sizing: border-box;
     position: relative;
     height: 350px;
   }
@@ -162,17 +149,8 @@
 .alert {
   padding: 5px;
   &.alert-success {
-    background-color:  scale-color($success, $lightness: 90%);
+    background-color: $success-low;
     color: $success;
-  }
-}
-
-.delete-flag-modal, .agree-flag-modal {
-  .modal-inner-container {
-    width: 300px;
-  }
-  .btn {
-    float: none !important;
   }
 }
 
@@ -200,4 +178,9 @@
 
 #google-search form {
   padding-left: 10px;
+}
+
+.change-timestamp-footer .btn-primary {
+  float: right;
+  margin-right: 5px;
 }

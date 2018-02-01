@@ -3,9 +3,11 @@ import getUrl from 'discourse-common/lib/get-url';
 import DiscourseURL from 'discourse/lib/url';
 import { ajax } from 'discourse/lib/ajax';
 import PasswordValidation from "discourse/mixins/password-validation";
+import { userPath } from 'discourse/lib/url';
 
 export default Ember.Controller.extend(PasswordValidation, {
   isDeveloper: Ember.computed.alias('model.is_developer'),
+  admin: Ember.computed.alias('model.admin'),
   passwordRequired: true,
   errorMessage: null,
   successMessage: null,
@@ -27,7 +29,7 @@ export default Ember.Controller.extend(PasswordValidation, {
   actions: {
     submit() {
       ajax({
-        url: `/users/password-reset/${this.get('model.token')}.json`,
+        url: userPath(`password-reset/${this.get('model.token')}.json`),
         type: 'PUT',
         data: {
           password: this.get('accountPassword')

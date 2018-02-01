@@ -9,6 +9,7 @@ import { popupAjaxError } from 'discourse/lib/ajax-error';
 import { censor } from 'pretty-text/censored-words';
 import { emojiUnescape } from 'discourse/lib/text';
 import PreloadStore from 'preload-store';
+import { userPath } from 'discourse/lib/url';
 
 export function loadTopicView(topic, args) {
   const topicId = topic.get('id');
@@ -28,9 +29,17 @@ export function loadTopicView(topic, args) {
   });
 }
 
+export const ID_CONSTRAINT = /^\d+$/;
+
 const Topic = RestModel.extend({
   message: null,
   errorLoading: false,
+
+  @computed('last_read_post_number', 'highest_post_number')
+  visited(lastReadPostNumber, highestPostNumber) {
+    // >= to handle case where there are deleted posts at the end of the topic
+    return lastReadPostNumber >= highestPostNumber;
+  },
 
   @computed('posters.firstObject')
   creator(poster){
@@ -49,11 +58,7 @@ const Topic = RestModel.extend({
 
   @computed('fancy_title')
   fancyTitle(title) {
-    // TODO: `siteSettings` should always be present, but there are places in the code
-    // that call Discourse.Topic.create instead of using the store.
-    // When the store is used, remove this.
-    const siteSettings = this.siteSettings || Discourse.SiteSettings;
-    return censor(emojiUnescape(title || ""), siteSettings.censored_words);
+    return censor(emojiUnescape(title || ""), Discourse.Site.currentProp('censored_words'));
   },
 
   // returns createdAt if there's no bumped date
@@ -97,6 +102,17 @@ const Topic = RestModel.extend({
     return newTags;
   },
 
+  @computed("suggested_topics")
+  suggestedTopics(suggestedTopics) {
+    if (suggestedTopics) {
+      const store = this.store;
+
+      return this.set('suggested_topics', suggestedTopics.map(st => {
+        return store.createRecord('topic', st);
+      }));
+    }
+  },
+
   replyCount: function() {
     return this.get('posts_count') - 1;
   }.property('posts_count'),
@@ -120,7 +136,7 @@ const Topic = RestModel.extend({
     const categoryName = this.get('categoryName');
     let category;
     if (categoryName) {
-      category = Discourse.Category.list().findBy('name', categoryName);
+      category = this.site.get('categories').findBy('name', categoryName);
     }
     this.set('category', category);
   }.observes('categoryName'),
@@ -182,9 +198,10 @@ const Topic = RestModel.extend({
     return this.urlForPostNumber(1) + (this.get('has_summary') ? "?filter=summary" : "");
   }.property('url'),
 
-  lastPosterUrl: function() {
-    return Discourse.getURL("/users/") + this.get("last_poster.username");
-  }.property('last_poster'),
+  @computed('last_poster.username')
+  lastPosterUrl(username) {
+    return userPath(username);
+  },
 
   // The amount of new posts to display. It might be different than what the server
   // tells us if we are still asynchronously flushing our "recently read" data.
@@ -221,16 +238,12 @@ const Topic = RestModel.extend({
 
   toggleStatus(property) {
     this.toggleProperty(property);
-    this.saveStatus(property, !!this.get(property));
+    return this.saveStatus(property, !!this.get(property));
   },
 
   saveStatus(property, value, until) {
     if (property === 'closed') {
       this.incrementProperty('posts_count');
-
-      if (value === true) {
-        this.set('details.auto_close_at', null);
-      }
     }
     return ajax(this.get('url') + "/status", {
       type: 'PUT',
@@ -284,21 +297,7 @@ const Topic = RestModel.extend({
         }
 
         return [];
-      }).catch(error => {
-        let showGenericError = true;
-        if (error && error.responseText) {
-          try {
-            bootbox.alert($.parseJSON(error.responseText).errors);
-            showGenericError = false;
-          } catch(e) { }
-        }
-
-        if (showGenericError) {
-          bootbox.alert(I18n.t('generic_error'));
-        }
-
-        throw error;
-      }).finally(() => this.set('bookmarking', false));
+      }).catch(popupAjaxError).finally(() => this.set('bookmarking', false));
     };
 
     const unbookmarkedPosts = [];
@@ -378,9 +377,8 @@ const Topic = RestModel.extend({
   },
 
   reload() {
-    const self = this;
-    return ajax('/t/' + this.get('id'), { type: 'GET' }).then(function(topic_json) {
-      self.updateFromJson(topic_json);
+    return ajax(`/t/${this.get('id')}`, { type: 'GET' }).then(topic_json => {
+      this.updateFromJson(topic_json);
     });
   },
 
@@ -428,6 +426,10 @@ const Topic = RestModel.extend({
     });
   },
 
+  @computed('excerpt')
+  escapedExcerpt(excerpt) {
+    return emojiUnescape(excerpt);
+  },
 
   hasExcerpt: Em.computed.notEmpty('excerpt'),
 

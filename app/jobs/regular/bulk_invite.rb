@@ -29,7 +29,8 @@ module Jobs
     end
 
     def read_csv_file(csv_path)
-      CSV.foreach(csv_path, encoding: "iso-8859-1:UTF-8") do |csv_info|
+      file = File.open(csv_path, encoding: 'bom|utf-8')
+      CSV.new(file).each do |csv_info|
         if csv_info[0]
           if (EmailValidator.email_regex =~ csv_info[0])
             # email is valid
@@ -45,6 +46,8 @@ module Jobs
     rescue Exception => e
       log "Bulk Invite Process Failed -- '#{e.message}'"
       @failed += 1
+    ensure
+      file.close
     end
 
     def get_group_ids(group_names, csv_line_number)
@@ -85,7 +88,7 @@ module Jobs
       begin
         Invite.invite_by_email(email, @current_user, topic, group_ids)
       rescue => e
-        log "Error inviting '#{email}' -- #{e}"
+        log "Error inviting '#{email}' -- #{Rails::Html::FullSanitizer.new.sanitize(e.message)}"
         @sent -= 1
         @failed += 1
       end

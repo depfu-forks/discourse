@@ -11,7 +11,7 @@ class UserHistory < ActiveRecord::Base
 
   validates_presence_of :action
 
-  scope :only_staff_actions, ->{ where("action IN (?)", UserHistory.staff_action_ids) }
+  scope :only_staff_actions, -> { where("action IN (?)", UserHistory.staff_action_ids) }
 
   before_save :set_admin_only
 
@@ -19,8 +19,8 @@ class UserHistory < ActiveRecord::Base
     @actions ||= Enum.new(delete_user: 1,
                           change_trust_level: 2,
                           change_site_setting: 3,
-                          change_site_customization: 4,
-                          delete_site_customization: 5,
+                          change_theme: 4,
+                          delete_theme: 5,
                           checked_for_custom_avatar: 6, # not used anymore
                           notified_about_avatar: 7,
                           notified_about_sequential_replies: 8,
@@ -45,8 +45,8 @@ class UserHistory < ActiveRecord::Base
                           delete_category: 27,
                           create_category: 28,
                           change_site_text: 29,
-                          block_user: 30,
-                          unblock_user: 31,
+                          silence_user: 30,
+                          unsilence_user: 31,
                           grant_admin: 32,
                           revoke_admin: 33,
                           grant_moderation: 34,
@@ -63,7 +63,10 @@ class UserHistory < ActiveRecord::Base
                           backup_download: 45,
                           backup_destroy: 46,
                           notified_about_get_a_room: 47,
-                          change_name: 48)
+                          change_name: 48,
+                          post_locked: 49,
+                          post_unlocked: 50,
+                          check_personal_message: 51)
   end
 
   # Staff actions is a subset of all actions, used to audit actions taken by staff users.
@@ -71,8 +74,8 @@ class UserHistory < ActiveRecord::Base
     @staff_actions ||= [:delete_user,
                         :change_trust_level,
                         :change_site_setting,
-                        :change_site_customization,
-                        :delete_site_customization,
+                        :change_theme,
+                        :delete_theme,
                         :change_site_text,
                         :suspend_user,
                         :unsuspend_user,
@@ -90,8 +93,8 @@ class UserHistory < ActiveRecord::Base
                         :change_category_settings,
                         :delete_category,
                         :create_category,
-                        :block_user,
-                        :unblock_user,
+                        :silence_user,
+                        :unsilence_user,
                         :grant_admin,
                         :revoke_admin,
                         :grant_moderation,
@@ -104,7 +107,10 @@ class UserHistory < ActiveRecord::Base
                         :activate_user,
                         :change_readonly_mode,
                         :backup_download,
-                        :backup_destroy]
+                        :backup_destroy,
+                        :post_locked,
+                        :post_unlocked,
+                        :check_personal_message]
   end
 
   def self.staff_action_ids
@@ -121,7 +127,7 @@ class UserHistory < ActiveRecord::Base
     query = query.where(custom_type: filters[:custom_type]) if filters[:custom_type].present?
 
     [:acting_user, :target_user].each do |key|
-      if filters[key] and obj_id = User.where(username_lower: filters[key].downcase).pluck(:id)
+      if filters[key] && (obj_id = User.where(username_lower: filters[key].downcase).pluck(:id))
         query = query.where("#{key}_id = ?", obj_id)
       end
     end
@@ -133,7 +139,7 @@ class UserHistory < ActiveRecord::Base
     self.where(target_user_id: user.id, action: UserHistory.actions[action_type])
   end
 
-  def self.exists_for_user?(user, action_type, opts=nil)
+  def self.exists_for_user?(user, action_type, opts = nil)
     opts = opts || {}
     result = self.where(target_user_id: user.id, action: UserHistory.actions[action_type])
     result = result.where(topic_id: opts[:topic_id]) if opts[:topic_id]
@@ -144,13 +150,12 @@ class UserHistory < ActiveRecord::Base
     [:action_id, :custom_type, :acting_user, :target_user, :subject]
   end
 
-  def self.staff_action_records(viewer, opts=nil)
+  def self.staff_action_records(viewer, opts = nil)
     opts ||= {}
     query = self.with_filters(opts.slice(*staff_filters)).only_staff_actions.limit(200).order('id DESC').includes(:acting_user, :target_user)
     query = query.where(admin_only: false) unless viewer && viewer.admin?
     query
   end
-
 
   def set_admin_only
     self.admin_only = UserHistory.admin_only_action_ids.include?(self.action)
@@ -158,7 +163,7 @@ class UserHistory < ActiveRecord::Base
   end
 
   def new_value_is_json?
-    [UserHistory.actions[:change_site_customization], UserHistory.actions[:delete_site_customization]].include?(action)
+    [UserHistory.actions[:change_theme], UserHistory.actions[:delete_theme]].include?(action)
   end
 
   def previous_value_is_json?
@@ -177,23 +182,23 @@ end
 #  details        :text
 #  created_at     :datetime         not null
 #  updated_at     :datetime         not null
-#  context        :string
-#  ip_address     :string
-#  email          :string
+#  context        :string(255)
+#  ip_address     :string(255)
+#  email          :string(255)
 #  subject        :text
 #  previous_value :text
 #  new_value      :text
 #  topic_id       :integer
 #  admin_only     :boolean          default(FALSE)
 #  post_id        :integer
-#  custom_type    :string
+#  custom_type    :string(255)
 #  category_id    :integer
 #
 # Indexes
 #
+#  index_staff_action_logs_on_action_and_id                  (action,id)
+#  index_staff_action_logs_on_subject_and_id                 (subject,id)
+#  index_staff_action_logs_on_target_user_id_and_id          (target_user_id,id)
 #  index_user_histories_on_acting_user_id_and_action_and_id  (acting_user_id,action,id)
-#  index_user_histories_on_action_and_id                     (action,id)
 #  index_user_histories_on_category_id                       (category_id)
-#  index_user_histories_on_subject_and_id                    (subject,id)
-#  index_user_histories_on_target_user_id_and_id             (target_user_id,id)
 #

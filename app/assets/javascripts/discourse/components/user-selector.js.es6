@@ -4,6 +4,10 @@ import userSearch from 'discourse/lib/user-search';
 import { findRawTemplate } from 'discourse/lib/raw-templates';
 
 export default TextField.extend({
+  autocorrect: false,
+  autocapitalize: false,
+  name: 'user-selector',
+
   @observes('usernames')
   _update() {
     if (this.get('canReceiveUpdates') === 'true')
@@ -17,6 +21,7 @@ export default TextField.extend({
         groups = [],
         currentUser = this.currentUser,
         includeMentionableGroups = this.get('includeMentionableGroups') === 'true',
+        includeMessageableGroups = this.get('includeMessageableGroups') === 'true',
         includeGroups = this.get('includeGroups') === 'true',
         allowedUsers = this.get('allowedUsers') === 'true';
 
@@ -37,21 +42,25 @@ export default TextField.extend({
       allowAny: this.get('allowAny'),
       updateData: (opts && opts.updateData) ? opts.updateData : false,
 
-      dataSource: function(term) {
+      dataSource(term) {
+        const termRegex = Discourse.User.currentProp('can_send_private_email_messages') ?
+          /[^a-zA-Z0-9_\-\.@\+]/ : /[^a-zA-Z0-9_\-\.]/;
+
         var results = userSearch({
-          term: term.replace(/[^a-zA-Z0-9_\-\.]/, ''),
+          term: term.replace(termRegex, ''),
           topicId: self.get('topicId'),
           exclude: excludedUsernames(),
           includeGroups,
           allowedUsers,
           includeMentionableGroups,
+          includeMessageableGroups,
           group: self.get("group")
         });
 
         return results;
       },
 
-      transformComplete: function(v) {
+      transformComplete(v) {
         if (v.username || v.name) {
           if (!v.username) { groups.push(v.name); }
           return v.username || v.name;
@@ -63,7 +72,7 @@ export default TextField.extend({
         }
       },
 
-      onChangeItems: function(items) {
+      onChangeItems(items) {
         var hasGroups = false;
         items = items.map(function(i) {
           if (groups.indexOf(i) > -1) { hasGroups = true; }
@@ -76,7 +85,7 @@ export default TextField.extend({
         if (self.get('onChangeCallback')) self.sendAction('onChangeCallback');
       },
 
-      reverseTransform: function(i) {
+      reverseTransform(i) {
         return { username: i };
       }
 

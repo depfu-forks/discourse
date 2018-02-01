@@ -6,11 +6,13 @@ const bindings = {
   '!':               {postAction: 'showFlags'},
   '#':               {handler: 'goToPost', anonymous: true},
   '/':               {handler: 'toggleSearch', anonymous: true},
+  'ctrl+alt+f':      {handler: 'toggleSearch', anonymous: true},
   '=':               {handler: 'toggleHamburgerMenu', anonymous: true},
   '?':               {handler: 'showHelpModal', anonymous: true},
   '.':               {click: '.alert.alert-info.clickable', anonymous: true}, // show incoming/updated topics
   'b':               {handler: 'toggleBookmark'},
   'c':               {handler: 'createTopic'},
+  'C':               {handler: 'focusComposer'},
   'ctrl+f':          {handler: 'showPageSearch', anonymous: true},
   'command+f':       {handler: 'showPageSearch', anonymous: true},
   'ctrl+p':          {handler: 'printTopic', anonymous: true},
@@ -48,6 +50,7 @@ const bindings = {
   'shift+p':         {handler: 'pinUnpinTopic'},
   'shift+r':         {handler: 'replyToTopic'},
   'shift+s':         {click: '#topic-footer-buttons button.share', anonymous: true}, // share topic
+  'shift+u':         {handler: 'goToUnreadPost'},
   'shift+z shift+z': {handler: 'logout'},
   't':               {postAction: 'replyAsNewTopic'},
   'u':               {handler: 'goBack', anonymous: true},
@@ -65,6 +68,12 @@ export default {
     this.searchService = this.container.lookup('search-service:main');
     this.appEvents = this.container.lookup('app-events:main');
     this.currentUser = this.container.lookup('current-user:main');
+    let siteSettings = this.container.lookup('site-settings:main');
+
+    // Disable the shortcut if private messages are disabled
+    if (!siteSettings.enable_personal_messages) {
+      delete bindings['g m'];
+    }
 
     Object.keys(bindings).forEach(key => {
       const binding = bindings[key];
@@ -91,7 +100,7 @@ export default {
     const topic = this.currentTopic();
     // BIG hack, need a cleaner way
     if (topic && $('.posts-wrapper').length > 0) {
-      topic.toggleBookmark();
+      this.container.lookup('controller:topic').send('toggleBookmark');
     } else {
       this.sendToTopicListItemView('toggleBookmark');
     }
@@ -115,6 +124,10 @@ export default {
 
   goToLastPost() {
     this._jumpTo('jumpBottom');
+  },
+
+  goToUnreadPost() {
+    this._jumpTo('jumpUnread');
   },
 
   _jumpTo(direction) {
@@ -163,7 +176,18 @@ export default {
   },
 
   createTopic() {
-    this.container.lookup('controller:composer').open({action: Composer.CREATE_TOPIC, draftKey: Composer.CREATE_TOPIC});
+    if (this.currentUser && this.currentUser.can_create_topic) {
+      this.container.lookup('controller:composer').open({action: Composer.CREATE_TOPIC, draftKey: Composer.CREATE_TOPIC});
+    }
+  },
+
+  focusComposer() {
+    const composer = this.container.lookup('controller:composer');
+    if (composer.get('model.viewOpen')) {
+      setTimeout(() => $('textarea.d-editor-input').focus(), 0);
+    } else {
+      composer.send('openIfDraft');
+    }
   },
 
   pinUnpinTopic() {
@@ -191,19 +215,19 @@ export default {
   },
 
   setTrackingToMuted(event) {
-    this.appEvents.trigger('topic-notifications-button:keyboard-trigger', {type: 'notification', id: 0, event});
+    this.appEvents.trigger('topic-notifications-button:changed', {type: 'notification', id: 0, event});
   },
 
   setTrackingToRegular(event) {
-    this.appEvents.trigger('topic-notifications-button:keyboard-trigger', {type: 'notification', id: 1, event});
+    this.appEvents.trigger('topic-notifications-button:changed', {type: 'notification', id: 1, event});
   },
 
   setTrackingToTracking(event) {
-    this.appEvents.trigger('topic-notifications-button:keyboard-trigger', {type: 'notification', id: 2, event});
+    this.appEvents.trigger('topic-notifications-button:changed', {type: 'notification', id: 2, event});
   },
 
   setTrackingToWatching(event) {
-    this.appEvents.trigger('topic-notifications-button:keyboard-trigger', {type: 'notification', id: 3, event});
+    this.appEvents.trigger('topic-notifications-button:changed', {type: 'notification', id: 3, event});
   },
 
   sendToTopicListItemView(action) {

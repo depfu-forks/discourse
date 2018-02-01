@@ -1,5 +1,6 @@
 import storePretender from 'helpers/store-pretender';
 import fixturePretender from 'helpers/fixture-pretender';
+import flagPretender from 'helpers/flag-pretender';
 
 export function parsePostData(query) {
   const result = {};
@@ -20,7 +21,7 @@ export function parsePostData(query) {
   return result;
 };
 
-function response(code, obj) {
+export function response(code, obj) {
   if (typeof code === "object") {
     obj = code;
     code = 200;
@@ -28,7 +29,10 @@ function response(code, obj) {
   return [code, {"Content-Type": "application/json"}, obj];
 }
 
-const success = () => response({ success: true });
+export function success() {
+  return response({ success: true });
+}
+
 const loggedIn = () => !!Discourse.User.current();
 
 
@@ -38,6 +42,7 @@ export default function() {
 
   const server = new Pretender(function() {
     storePretender.call(this, helpers);
+    flagPretender.call(this, helpers);
     const fixturesByUrl = fixturePretender.call(this, helpers);
 
     this.get('/admin/plugins', () => response({ plugins: [] }));
@@ -63,35 +68,43 @@ export default function() {
       }] });
     });
 
-    this.get(`/users/eviltrout/emails.json`, () => {
+    this.get(`/u/:username/emails.json`, () => {
       return response({ email: 'eviltrout@example.com' });
     });
 
-    this.get('/users/eviltrout.json', () => {
-      const json = fixturesByUrl['/users/eviltrout.json'];
+    this.get('/u/eviltrout.json', () => {
+      const json = fixturesByUrl['/u/eviltrout.json'];
       json.user.can_edit = loggedIn();
       return response(json);
     });
 
-    this.get('/users/eviltrout/summary.json', () => {
+    this.get('/u/eviltrout/summary.json', () => {
       return response({
         user_summary: {
-          topics: [],
-          topic_ids: [],
-          replies: [],
-          links: []
+          topic_ids: [1234],
+          replies: [{ topic_id: 1234 }],
+          links: [{ topic_id: 1234, url: 'https://eviltrout.com' }],
+          most_replied_to_users: [ { id: 333 } ],
+          most_liked_by_users: [ { id: 333 } ],
+          most_liked_users: [ { id: 333 } ],
+          badges: [ { badge_id: 444 } ]
         },
-        topics: [],
+        badges: [
+          { id: 444, count: 1 }
+        ],
+        topics: [
+          { id: 1234, title: 'cool title', url: '/t/1234/cool-title' }
+        ],
       });
     });
 
-    this.get('/users/eviltrout/invited_count.json', () => {
+    this.get('/u/eviltrout/invited_count.json', () => {
       return response({
         "counts": { "pending": 1, "redeemed": 0, "total": 0 }
       });
     });
 
-    this.get('/users/eviltrout/invited.json', () => {
+    this.get('/u/eviltrout/invited.json', () => {
       return response({ "invites": [ {id: 1} ] });
     });
 
@@ -108,17 +121,29 @@ export default function() {
             id: 1234
           }]
         });
+      } else if (request.queryParams.q === 'evil') {
+        return response({
+          posts: [{
+            id: 1234
+          }],
+          tags: [{
+            id: 6,
+            name: 'eviltrout'
+          }]
+        });
       }
 
       return response({});
     });
 
-    this.put('/users/eviltrout.json', () => response({ user: {} }));
+    this.put('/u/eviltrout.json', () => response({ user: {} }));
 
     this.get("/t/280.json", () => response(fixturesByUrl['/t/280/1.json']));
+    this.get("/t/280/20.json", () => response(fixturesByUrl['/t/280/1.json']));
     this.get("/t/28830.json", () => response(fixturesByUrl['/t/28830/1.json']));
     this.get("/t/9.json", () => response(fixturesByUrl['/t/9/1.json']));
     this.get("/t/12.json", () => response(fixturesByUrl['/t/12/1.json']));
+    this.put("/t/1234/re-pin", success);
 
     this.get("/t/id_for/:slug", () => {
       return response({id: 280, slug: "internationalization-localization", url: "/t/internationalization-localization/280"});
@@ -134,7 +159,7 @@ export default function() {
     this.delete('/draft.json', success);
     this.post('/draft.json', success);
 
-    this.get('/users/:username/staff-info.json', () => response({}));
+    this.get('/u/:username/staff-info.json', () => response({}));
 
     this.get('/post_action_users', () => {
       return response({
@@ -195,12 +220,20 @@ export default function() {
                           current_email: '<small>current@example.com</small>' });
       }
 
+      if (data.password === 'not-activated-edit') {
+        return response({ error: "not active",
+                          reason: "not_activated",
+                          sent_to_email: 'eviltrout@example.com',
+                          current_email: 'current@example.com' });
+      }
+
       return response(400, {error: 'invalid login'});
     });
 
-    this.post('/users/action/send_activation_email', success);
+    this.post('/u/action/send_activation_email', success);
+    this.put('/u/update-activation-email', success);
 
-    this.get('/users/hp.json', function() {
+    this.get('/u/hp.json', function() {
       return response({"value":"32faff1b1ef1ac3","challenge":"61a3de0ccf086fb9604b76e884d75801"});
     });
 
@@ -208,14 +241,14 @@ export default function() {
       return response({"csrf":"mgk906YLagHo2gOgM1ddYjAN4hQolBdJCqlY6jYzAYs="});
     });
 
-    this.get('/users/check_username', function(request) {
+    this.get('/u/check_username', function(request) {
       if (request.queryParams.username === 'taken') {
         return response({available: false, suggestion: 'nottaken'});
       }
       return response({available: true});
     });
 
-    this.post('/users', () => response({success: true}));
+    this.post('/u', () => response({success: true}));
 
     this.get('/login.html', () => [200, {}, 'LOGIN PAGE']);
 
@@ -247,6 +280,10 @@ export default function() {
       return response(200, fixturesByUrl['/groups.json']);
     });
 
+    this.get("groups/search.json", () => {
+      return response(200, []);
+    });
+
     this.get("/groups/discourse/topics.json", () => {
       return response(200, fixturesByUrl['/groups/discourse/posts.json']);
     });
@@ -267,6 +304,10 @@ export default function() {
 
     this.get('/posts/:post_id/reply-history.json', () => {
       return response(200, [ { id: 2222, post_number: 2222 } ]);
+    });
+
+    this.get("/posts/:post_id/reply-ids.json", () => {
+      return response(200, { direct_reply_ids: [45], all_reply_ids: [45, 100] });
     });
 
     this.post('/user_badges', () => response(200, fixturesByUrl['/user_badges']));
@@ -321,13 +362,54 @@ export default function() {
     });
 
     this.get('/tag_groups', () => response(200, {tag_groups: []}));
+
+    this.get('/admin/users/1234.json', () => {
+      return response(200, {
+        id: 1234,
+        username: 'regular',
+      });
+    });
+
+    this.get('/admin/users/2.json', () => {
+      return response(200, {
+        id: 2,
+        username: 'sam',
+        admin: true
+      });
+    });
+
     this.post('/admin/users/:user_id/generate_api_key', success);
     this.delete('/admin/users/:user_id/revoke_api_key', success);
+    this.delete('/admin/users/:user_id.json', () => response(200, { deleted: true }));
     this.post('/admin/badges', success);
     this.delete('/admin/badges/:id', success);
 
+    this.get('/admin/logs/watched_words', () => {
+      return response(200, fixturesByUrl['/admin/logs/watched_words.json']);
+    });
+    this.delete('/admin/logs/watched_words/:id.json', success);
+
+    this.post('/admin/logs/watched_words.json', request => {
+      const result = parsePostData(request.requestBody);
+      result.id = new Date().getTime();
+      return response(200, result);
+    });
+
+    this.get('/admin/logs/search_logs.json', () => {
+      return response(200, [
+        {"term":"foobar","searches":35,"click_through":6,"unique":16}
+      ]);
+    });
+
+    this.get('/admin/logs/search_logs/term/ruby.json', () => {
+      return response(200, {
+        "term":{"type":"search_log_term","title":"Search Count","data":[{"x":"2017-07-20","y":2}]}
+      });
+    });
+
     this.get('/onebox', request => {
-      if (request.queryParams.url === 'http://www.example.com/has-title.html') {
+      if (request.queryParams.url === 'http://www.example.com/has-title.html' ||
+          request.queryParams.url === 'http://www.example.com/has-title-and-a-url-that-is-more-than-80-characters-because-thats-good-for-seo-i-guess.html') {
         return [
           200,
           {"Content-Type": "application/html"},

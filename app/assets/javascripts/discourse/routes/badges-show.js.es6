@@ -31,7 +31,7 @@ export default Discourse.Route.extend({
     const username = transition.queryParams && transition.queryParams.username;
 
     return UserBadge.findByBadgeId(model.get("id"), {username}).then(userBadges => {
-      this.userBadges = userBadges;
+      this.userBadgesGrant = userBadges;
     });
   },
 
@@ -42,8 +42,10 @@ export default Discourse.Route.extend({
     }
   },
 
+
   setupController(controller, model) {
     controller.set("model", model);
-    controller.set("userBadges", this.userBadges);
+    controller.set("userBadges", this.userBadgesGrant);
+    controller.set("userBadgesAll", this.userBadgesAll);
   }
 });

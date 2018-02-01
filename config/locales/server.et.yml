@@ -27,7 +27,6 @@ et:
   topics: "Teemad"
   posts: "postitused"
   loading: "Laetakse"
-  powered_by_html: 'Ajamiks on <a href="http://www.discourse.org">Discourse</a>... vaadata JavaScript lubatuna'
   log_in: "Logi sisse"
   purge_reason: "Kustutatud automaatselt kui mahajäetud, deaktiveeritud konto"
   disable_remote_images_download_reason: "Väliste piltide allalaadimine keelati, kuna polnud polnud piisavalt vaba ruumi."
@@ -44,7 +43,6 @@ et:
         auto_generated_email_error: "Juhtub, kui 'precedence' päis on seatud väärtusele: list, junk, bulk või auto_reply või kui mingi muu päis sisaldab väärtusi: auto-submitted, auto-replied või auto-generated."
         no_body_detected_error: "Juhtub, kui meil ei õnnestunud keha eraldada ja manused puudusid."
         inactive_user_error: "Juhtub, kui saatja ei ole aktiveeritud."
-        blocked_user_error: "Juhtub, kui saatja on blokeeritud."
         bad_destination_address: "Juhtub, kui ükski To/Cc/Bcc meiliaadresidest ei lange kokku seadistatud sissetulavate meiliaadressidega."
         strangers_not_allowed_error: "Juhtub, kui kasutaja proovib teha teemat liiki, millesse ta ise ei kuulu."
         insufficient_trust_level_error: "Juhtub, kui kasutaja proovib teha teemat liiki, millele tal puudub vajalik usaldustase."
@@ -186,7 +184,6 @@ et:
     hot: "Populaarsed teemad"
     top: "Parimad teemad"
     posts: "Viimased postitused"
-    private_posts: "Viimased privaatsõnumid"
     group_posts: "Viimased postitused grupilt %{group_name}"
     group_mentions: "Viimati mainitud grupis %{group_name}"
     user_posts: "Viimased postitused kasutajalt @%{username}"
@@ -255,9 +252,7 @@ et:
         topic:
           attributes:
             base:
-              warning_requires_pm: "Saad hoiatusi lisada vaid privaatsõnumitele."
               too_many_users: "Saad hoiatusi saata vaid ühele kasutajale korraga."
-              cant_send_pm: "Vabanda, sa ei saa sellele kasutajale privaatsõnumit saata."
               no_user_selected: "Pead valima sobiva kasutaja."
             featured_link:
               invalid: "on vigane. URL peab sisaldama http:// või https://."
@@ -276,16 +271,12 @@ et:
           attributes:
             hex:
               invalid: "pole korrektne värv"
-        post_reply:
-          base:
-            different_topic: "Postitus ja vastus peavad kuuluma samasse teemasse."
         web_hook:
           attributes:
             payload_url:
               invalid: "URL on vigane. URL peab sisaldama http:// või https://. Ning tühikud ei ole lubatud."
       <<: *errors
   user_profile:
-    no_info_me: "<div class='missing-profile'>Sinu profiili väli 'Minust' on hetkel tühi, <a href='/users/%{username_lower}/preferences/about-me'>kas sooviksid selle ära täita?</a></div>"
     no_info_other: "<div class='missing-profile'>%{name} profiilis on väli 'Minust' veel täitmata</div>"
   vip_category_name: "Lounge"
   vip_category_description: "Liik, mis on eksklusiivne kasutajatele, kellel on usaldustase 3 või kõrgem."
@@ -294,7 +285,6 @@ et:
   staff_category_name: "Meeskond"
   staff_category_description: "Privaatfoorum meeskonnasisesteks aruteludeks. Teemad on nähtavad vaid adminnidele ja moderaatoritele."
   assets_topic_title: "Saidi kujunduse vahendid"
-  assets_topic_body: "See on püsiteema, nähtav vaid meeskonnale, selle saidi kujunduses kasutatavate piltide ja failide talletamiseks. Ära seda kustuta!\n\n\nTee nii:\n\n\n1. Vasta siia teemasse.\n2. Lae üles kõik pildid, mida soovida kasutada logodena, ikoonidena, vms. (Kasuta üleslaadimise ikooni postituse redaktori tööriistaribal, võid pildid siia ka lohistada või kleepida.)\n3. Postita oma vastus.\n4. Tee üleslaetud pildifailini leiad kas oma uues postituses oleval pildil paremklikates, või postituse muutmise ikooni klikkides ja kopeerides postitusest redaktoris. Kopeeri teed pildifailideni.\n5. Kleebi need teed sättesse [basic settings](/admin/site_settings/category/required).\n\n\nKui soovid lubada einevate failitüüpide üleslaadimist, muuda `authorized_extensions` sättes [file settings](/admin/site_settings/category/files)."
   discourse_welcome_topic:
     title: "Teretulemast Discourse'i"
     body: |2
@@ -379,7 +369,6 @@ et:
       pms_per_day: "Oled ületanud tänaseks lubatud sõnumite limiidi. Palun oota %{time_left} enne kui uuesti proovid."
       create_like: "Oled ületanud tänaseks lubatud meeldimiste lisamise limiidi. Palun oota %{time_left} enne kui uuesti proovid."
       create_bookmark: "Oled ületanud tänaseks lubatud järjehoidjate lisamise limiidi. Palun oota %{time_left} enne kui uuesti proovid."
-      edit_post: "Oled ületanud tänaseks lubatud postituste muutmise limiidi. Palun oota %{time_left} enne kui uuesti proovid."
       live_post_counts: "Küsid postituste reaalajas loendit liiga kiiresti. Palun oota %{time_left} enne kui uuesti proovid."
       unsubscribe_via_email: "Oled ületanud tänaseks lubatud meilitsi tellimuste tühistamise limiidi. Palun oota %{time_left} enne kui uuesti proovid."
       topic_invitations_per_day: "Oled ületanud tänaseks lubatud teemadesse kutsumise limiidi. Palun oota %{time_left} enne kui uuesti proovid."
@@ -496,7 +485,6 @@ et:
       long_form: 'tähistasin selle kui teemavälise'
     spam:
       title: 'Spämm'
-      description: 'See postitus on reklaam. Käesoleva vestlusega seoses ei ole see ei kasulik ega asjakohane vaid pigem millegi reklaamimine.'
       long_form: 'tähistasin selle kui spämmi'
       email_title: '"%{title}" tähistati spämmina'
       email_body: "%{link}\n\n%{message}"
@@ -691,21 +679,15 @@ et:
     max_post_length: "Maksimaalne lubatud postituse pikkus tähemärkides"
     min_topic_title_length: "Lühim lubatud teema pealkirja pikkus tähemärkides"
     max_topic_title_length: "Maksimaalne lubatud teema pealkirja pikkus tähemärkides"
-    min_private_message_title_length: "Minimaalne lubatud teema pealkirja pikkus tähemärkides"
+    min_personal_message_title_length: "Minimaalne lubatud teema pealkirja pikkus tähemärkides"
     enable_instagram_logins: "Luba autentimine Instagrami abil, nõuab instagram_consumer_key ja instagram_consumer_secret"
     instagram_consumer_key: "Teenusekasutaja avalik võti Instagrami abil autentimiseks"
     instagram_consumer_secret: "Teenusekasutaja salajane võti Instagrami abil autentimiseks"
     enable_staged_users: "Sissetulevate meilide töötlemisel loo kasutajad ettevalmistamiseks automaatselt."
     maximum_staged_users_per_email: "Ettevalmistamisel olevate kasutajate maksimaalne arv sai sissetuleva meili töötlemisel täis."
     dominating_topic_minimum_percent: "Mitu protsenti teema postitustest peab kasutaja tegema, et talle saadetaks meeldetuletus teema liigse domineerimise kohta."
-    feed_polling_enabled: "VAID SÄNGITAMISEL: Kas sängitada RSS/ATOM voog postitusena."
-    feed_polling_url: "VAID SÄNGITAMISEL: URL või RSS/ATOM voog, mida sängitada."
-    embed_by_username: "Sängitatud teemasid lisava kasutaja Discourse kasutajanimi."
-    embed_title_scrubber: "Regex sängitatavate päiste puhastamiseks."
     embed_truncate: "Lühenda sängitatud postitused."
     embed_post_limit: "Maksimaalne postituste arv, mida sängitada."
-    embed_whitelist_selector: "CSS valik elementidele, mida lubada sängitamistes."
-    embed_blacklist_selector: "CSS valik elementidele, mida eemaldada sängitamistes."
     tagging_enabled: "Luba silte teemadel?"
     min_trust_to_create_tag: "Sildi lisamiseks nõutav minimaalne usaldustase."
     max_tags_per_topic: "Teemale liidetavate siltide maksimaalne arv."
@@ -744,6 +726,8 @@ et:
     csv_export_failed:
       subject_template: "Andmete eksportimine ebaõnnestus"
   user_notifications:
+    previous_discussion: "Varasemad vastused"
+    in_reply_to: "Vastuseks"
     unsubscribe:
       title: "Tühista tellimus"
     user_posted_pm_staged:
@@ -751,30 +735,8 @@ et:
       text_body_template: |2
 
         %{message}
-    mailing_list:
-      why: "Saidi %{site_link} kõik toimingud päeval %{date}"
-      subject_template: "[%{site_name}] Kokkuvõte päeval %{date}"
-      from: "%{site_name} kokkuvõte"
-      new_topics: "Uued teemad"
-      topic_updates: "eemade uuendused"
-      view_this_topic: "Vaata seda teemat"
-      back_to_top: "Tagasi üles"
-    forgot_password:
-      subject_template: "[%{site_name}] Parooli uuendamine"
-    set_password:
-      subject_template: "[%{site_name}] Määra parool"
-    admin_login:
-      subject_template: "[%{site_name}] Logi sisse"
-    account_created:
-      subject_template: "[%{site_name}] Sinu uus konto"
-    confirm_old_email:
-      subject_template: "[%{site_name}] Kinnita oma kehtiv meiliaadress"
-    notify_old_email:
-      subject_template: "[%{site_name}] Sinu meiliaadress on muudetud"
     signup_after_approval:
       subject_template: "Oled saidil %{site_name} heaks kiidetud!"
-    signup:
-      subject_template: "[%{site_name}] Kinnita oma uus konto"
   page_not_found:
     title: "Oih! Soovitud lehte ei ole või on see privaatne."
     popular_topics: "Populaarsed"
@@ -913,13 +875,10 @@ et:
       description: Kasutasid postituses emotikoni
     first_mention:
       name: Esimene mainimine
-      description: Mainisid postituses kasutajat
     first_reply_by_email:
       name: Esimene vastamine meiliga
-      description: Vastasid postitusele läbi e-maili
   admin_login:
     success: "Kiri saadetud"
-    error: "Viga!"
     email_input: "Admini kiri"
     submit_button: "Saada kiri"
   tags:
@@ -937,7 +896,6 @@ et:
       title: "Saada aktiveerimismeil uuesti"
   safe_mode:
     title: "Sisene turvalisse režiimi"
-    no_customizations: "Keela kõik saidi kohandused"
     only_official: "Keela kõik mitteametlikud pluginad"
     no_plugins: "Keela kõik pluginad"
     enter: "Sisene turvalisse režiimi"

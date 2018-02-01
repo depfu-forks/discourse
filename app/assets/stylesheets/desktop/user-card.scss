@@ -9,7 +9,7 @@ $user_card_background: $secondary;
   width: 500px;
   left: -9999px;
   top: -9999px;
-  z-index: 990;
+  z-index: z("usercard");
   box-shadow: 1px 2px 6px rgba(0,0,0, .25);
   margin-top: -2px;
   color: $user_card_primary;
@@ -41,6 +41,9 @@ $user_card_background: $secondary;
     a.card-huge-avatar {
       outline: none;
     }
+    .staged {
+      font-style: italic;
+    }
   }
 
   &.no-bg {
@@ -60,8 +63,8 @@ $user_card_background: $secondary;
 
   h1 {
     min-width: 120px;
-    font-size: 1.786em;
-    line-height: 1.25;
+    font-size: $font-up-4;
+    line-height: $line-height-medium;
     display: block;
     max-width: 250px;
     white-space: nowrap;
@@ -71,14 +74,14 @@ $user_card_background: $secondary;
       color: $user_card_primary;
     }
     i {
-      font-size: .8em;
+      font-size: $font-down-1;
       color: $user_card_primary;
     }
   }
 
   h2 {
-    font-size: 1.071em;
-    line-height: 1.25;
+    font-size: $font-up-1;
+    line-height: $line-height-medium;
     font-weight: normal;
     display: block;
     max-width: 250px;
@@ -91,7 +94,7 @@ $user_card_background: $secondary;
   }
 
   h3 {
-    font-size: 0.929em;
+    font-size: $font-0;
     font-weight: normal;
     margin-top: 0;
     color: scale-color($user_card_primary, $lightness: 20%);
@@ -103,7 +106,7 @@ $user_card_background: $secondary;
   }
 
   .groups {
-    font-size: 0.929em;
+    font-size: $font-down-1;
     font-weight: normal;
     margin-top: 0;
     color: $user_card_background;
@@ -193,7 +196,7 @@ $user_card_background: $secondary;
     float: right;
     margin: 0;
 
-    a {width: 100%; min-width: 150px;}
+    button { width: 100%; min-width: 150px; }
   }
 
   .new-user a {
@@ -205,17 +208,12 @@ $user_card_background: $secondary;
 
     .names {
       float: left;
-      height: 60px;
-      position: relative;
       width: 45%;
 
       span {
-        position: absolute;
-        bottom: 0;
         display: block;
         width: 250px;
       }
-
     }
 
     .badge-section {
@@ -226,13 +224,13 @@ $user_card_background: $secondary;
 
       .user-badge {
         background: scale-color($user_card_background, $lightness: -5%);
-        border: 1px solid dark-light-diff($primary, $secondary, 90%, -60%);
+        border: 1px solid $primary-low;
         color: $user_card_primary;
       }
 
       h3 {
         color: $user_card_background;
-        font-size: 1em;
+        font-size: $font-0;
         margin-bottom: -8px;
       }
     }
@@ -257,7 +255,11 @@ $user_card_background: $secondary;
     position: absolute;
     right: 12px;
     bottom: 12px;
-    font-size: 2.143em;
+    font-size: $font-up-5;
     i {color: $user_card_primary;}
+  }
+
+  .metadata .email .btn {
+    padding: 2px 12px;
   }
 }

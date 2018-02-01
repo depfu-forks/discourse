@@ -2,6 +2,7 @@ import { default as computed, observes } from 'ember-addons/ember-computed-decor
 import InputValidation from 'discourse/models/input-validation';
 import { load, lookupCache } from 'pretty-text/oneboxer';
 import { ajax } from 'discourse/lib/ajax';
+import afterTransition from 'discourse/lib/after-transition';
 
 export default Ember.Component.extend({
   classNames: ['title-input'],
@@ -10,7 +11,15 @@ export default Ember.Component.extend({
   didInsertElement() {
     this._super();
     if (this.get('focusTarget') === 'title') {
-      this.$('input').putCursorAtEnd();
+      const $input = this.$("input");
+
+      afterTransition(this.$().closest("#reply-control"), () => {
+        $input.putCursorAtEnd();
+      });
+    }
+
+    if (this.get('composer.titleLength') > 0) {
+      Ember.run.debounce(this, this._titleChanged, 10);
     }
   },
 
@@ -31,6 +40,13 @@ export default Ember.Component.extend({
     }
   },
 
+  @computed('watchForLink')
+  titleMaxLength() {
+    // maxLength gets in the way of pasting long links, so don't use it if featured links are allowed.
+    // Validation will display a message if titles are too long.
+    return this.get('watchForLink') ? null : this.siteSettings.max_topic_title_length;
+  },
+
   @observes('composer.titleLength', 'watchForLink')
   _titleChanged() {
     if (this.get('composer.titleLength') === 0) { this.set('autoPosted', false); }
@@ -45,7 +61,7 @@ export default Ember.Component.extend({
 
   @observes('composer.replyLength')
   _clearFeaturedLink() {
-    if (this.get('watchForLink') && this.get('composer.replyLength') === 0) {
+    if (this.get('watchForLink') && this.bodyIsDefault()) {
       this.set('composer.featuredLink', null);
     }
   },
@@ -53,7 +69,7 @@ export default Ember.Component.extend({
   _checkForUrl() {
     if (!this.element || this.isDestroying || this.isDestroyed) { return; }
 
-    if (this.get('isAbsoluteUrl') && (this.get('composer.reply')||"").length === 0) {
+    if (this.get('isAbsoluteUrl') && this.bodyIsDefault()) {
 
       // only feature links to external sites
       if (this.get('composer.title').match(new RegExp("^https?:\\/\\/" + window.location.hostname, "i"))) { return; }
@@ -88,9 +104,10 @@ export default Ember.Component.extend({
       this.set('composer.featuredLink', this.get('composer.title'));
 
       const $h = $(html),
-            heading = $h.find('h3').length > 0 ? $h.find('h3') : $h.find('h4');
+            heading = $h.find('h3').length > 0 ? $h.find('h3') : $h.find('h4'),
+            composer = this.get('composer');
 
-      this.set('composer.reply', this.get('composer.title'));
+      composer.appendText(this.get('composer.title'), null, {block: true});
 
       if (heading.length > 0 && heading.text().length > 0) {
         this.changeTitle(heading.text());
@@ -109,8 +126,13 @@ export default Ember.Component.extend({
     }
   },
 
-  @computed('composer.title')
-  isAbsoluteUrl() {
-    return this.get('composer.titleLength') > 0 && /^(https?:)?\/\/[\w\.\-]+/i.test(this.get('composer.title'));
+  @computed('composer.title', 'composer.titleLength')
+  isAbsoluteUrl(title, titleLength) {
+    return titleLength > 0 && /^(https?:)?\/\/[\w\.\-]+/i.test(title) && !/\s/.test(title);
+  },
+
+  bodyIsDefault() {
+    const reply = this.get('composer.reply')||"";
+    return (reply.length === 0 || (reply === (this.get("composer.category.topic_template")||"")));
   }
 });

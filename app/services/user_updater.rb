@@ -33,7 +33,10 @@ class UserUpdater
     :email_previous_replies,
     :email_in_reply_to,
     :like_notification_frequency,
-    :include_tl0_in_digests
+    :include_tl0_in_digests,
+    :theme_key,
+    :allow_private_messages,
+    :homepage_id,
   ]
 
   def initialize(actor, user)
@@ -75,6 +78,11 @@ class UserUpdater
 
     save_options = false
 
+    # special handling for theme_key cause we need to bump a sequence number
+    if attributes.key?(:theme_key) && user.user_option.theme_key != attributes[:theme_key]
+      user.user_option.theme_key_seq += 1
+    end
+
     OPTION_ATTR.each do |attribute|
       if attributes.key?(attribute)
         save_options = true
@@ -103,15 +111,15 @@ class UserUpdater
         update_muted_users(attributes[:muted_usernames])
       end
 
-      saved = (!save_options || user.user_option.save) && user_profile.save && user.save
+      if (saved = (!save_options || user.user_option.save) && user_profile.save && user.save) &&
+         (attributes[:name].present? && old_user_name.casecmp(attributes.fetch(:name)) != 0) ||
+         (attributes[:name].blank? && old_user_name.present?)
 
-      if saved
-        # log name changes
-        if attributes[:name].present? && old_user_name.downcase != attributes.fetch(:name).downcase
-          StaffActionLogger.new(@actor).log_name_change(user.id, old_user_name, attributes.fetch(:name))
-        elsif attributes[:name].blank? && old_user_name.present?
-          StaffActionLogger.new(@actor).log_name_change(user.id, old_user_name, "")
-        end
+        StaffActionLogger.new(@actor).log_name_change(
+          user.id,
+          old_user_name,
+          attributes.fetch(:name) { '' }
+        )
       end
     end
 

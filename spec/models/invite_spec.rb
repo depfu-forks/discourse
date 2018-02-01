@@ -102,8 +102,15 @@ describe Invite do
             expect(topic.invite_by_email(inviter, 'ICEKING@adventuretime.ooo')).to eq(@invite)
           end
 
+          it 'updates timestamp of existing invite' do
+            @invite.created_at = 10.days.ago
+            @invite.save
+            resend_invite = topic.invite_by_email(inviter, 'iceking@adventuretime.ooo')
+            expect(resend_invite.created_at).to be_within(1.minute).of(Time.zone.now)
+          end
+
           it 'returns a new invite if the other has expired' do
-            SiteSetting.stubs(:invite_expiry_days).returns(1)
+            SiteSetting.invite_expiry_days = 1
             @invite.created_at = 2.days.ago
             @invite.save
             new_invite = topic.invite_by_email(inviter, 'iceking@adventuretime.ooo')
@@ -134,6 +141,7 @@ describe Invite do
     let(:inviter) { group_private_topic.user }
 
     before do
+      group.add_owner(inviter)
       @invite = group_private_topic.invite_by_email(inviter, iceking)
     end
 
@@ -147,6 +155,13 @@ describe Invite do
         expect(@invite.groups).to eq([group])
       end
     end
+
+    it 'verifies that inviter is authorized to invite user to a topic' do
+      tl2_user = Fabricate(:user, trust_level: 2)
+
+      invite = group_private_topic.invite_by_email(tl2_user, 'foo@bar.com')
+      expect(invite.groups.count).to eq(0)
+    end
   end
 
   context 'an existing user' do
@@ -155,12 +170,22 @@ describe Invite do
 
     it "works" do
       # doesn't create an invite
-      expect { topic.invite_by_email(topic.user, coding_horror.email) }.to raise_error(StandardError)
+      expect { topic.invite_by_email(topic.user, coding_horror.email) }.to raise_error(Invite::UserExists)
 
       # gives the user permission to access the topic
       expect(topic.allowed_users.include?(coding_horror)).to eq(true)
     end
 
+  end
+
+  context 'a staged user' do
+    it 'creates an invite for a staged user' do
+      Fabricate(:staged, email: 'staged@account.com')
+      invite = Invite.invite_by_email('staged@account.com', Fabricate(:coding_horror))
+
+      expect(invite).to be_valid
+      expect(invite.email).to eq('staged@account.com')
+    end
   end
 
   context '.redeem' do
@@ -206,34 +231,6 @@ describe Invite do
 
     end
 
-    context 'enqueues a job to email "set password" instructions' do
-
-      it 'does not enqueue an email if sso is enabled' do
-        SiteSetting.stubs(:enable_sso).returns(true)
-        Jobs.expects(:enqueue).with(:invite_password_instructions_email, has_key(:username)).never
-        invite.redeem
-      end
-
-      it 'does not enqueue an email if local login is disabled' do
-        SiteSetting.stubs(:enable_local_logins).returns(false)
-        Jobs.expects(:enqueue).with(:invite_password_instructions_email, has_key(:username)).never
-        invite.redeem
-      end
-
-      it 'does not enqueue an email if the user has already set password' do
-        Fabricate(:user, email: invite.email, password_hash: "7af7805c9ee3697ed1a83d5e3cb5a3a431d140933a87fdcdc5a42aeef9337f81")
-        Jobs.expects(:enqueue).with(:invite_password_instructions_email, has_key(:username)).never
-        Jobs.expects(:enqueue).with(:critical_user_email, has_entries(type: :signup)) # should enqueue an account activation email
-        invite.redeem
-      end
-
-      it 'enqueues an email if all conditions are satisfied' do
-        Jobs.expects(:enqueue).with(:invite_password_instructions_email, has_key(:username))
-        invite.redeem
-      end
-
-    end
-
     context "as a moderator" do
       it "will give the user a moderator flag" do
         invite.invited_by = Fabricate(:admin)
@@ -266,7 +263,7 @@ describe Invite do
 
     context "invite trust levels" do
       it "returns the trust level in default_invitee_trust_level" do
-        SiteSetting.stubs(:default_invitee_trust_level).returns(TrustLevel[3])
+        SiteSetting.default_invitee_trust_level = TrustLevel[3]
         expect(invite.redeem.trust_level).to eq(TrustLevel[3])
       end
     end
@@ -274,7 +271,7 @@ describe Invite do
     context 'inviting when must_approve_users? is enabled' do
       it 'correctly activates accounts' do
         invite.invited_by = Fabricate(:admin)
-        SiteSetting.stubs(:must_approve_users).returns(true)
+        SiteSetting.must_approve_users = true
         user = invite.redeem
         expect(user.approved?).to eq(true)
       end
@@ -302,7 +299,6 @@ describe Invite do
           # returns true for redeemed
           expect(invite).to be_redeemed
         end
-
 
         context 'again' do
           context "without a passthrough" do
@@ -414,8 +410,10 @@ describe Invite do
 
       invites = Invite.find_pending_invites_from(inviter)
 
-      expect(invites.size).to eq(1)
+      expect(invites.length).to eq(1)
       expect(invites.first).to eq pending_invite
+
+      expect(Invite.find_pending_invites_count(inviter)).to eq(1)
     end
   end
 
@@ -438,8 +436,10 @@ describe Invite do
 
       invites = Invite.find_redeemed_invites_from(inviter)
 
-      expect(invites.size).to eq(1)
+      expect(invites.length).to eq(1)
       expect(invites.first).to eq redeemed_invite
+
+      expect(Invite.find_redeemed_invites_count(inviter)).to eq(1)
     end
   end
 
@@ -486,23 +486,16 @@ describe Invite do
 
   end
 
-  describe '.redeem_from_token' do
-    let(:inviter) { Fabricate(:user) }
-    let(:invite) { Fabricate(:invite, invited_by: inviter, email: 'test@example.com', user_id: nil) }
-    let(:user) { Fabricate(:user, email: invite.email) }
-
-    it 'redeems the invite from token' do
-      Invite.redeem_from_token(invite.invite_key, user.email)
-      invite.reload
-      expect(invite).to be_redeemed
+  describe '.rescind_all_invites_from' do
+    it 'removes all invites sent by a user' do
+      user = Fabricate(:user)
+      invite_1 = Fabricate(:invite, invited_by: user)
+      invite_2 = Fabricate(:invite, invited_by: user)
+      Invite.rescind_all_invites_from(user)
+      invite_1.reload
+      invite_2.reload
+      expect(invite_1.deleted_at).to be_present
+      expect(invite_2.deleted_at).to be_present
     end
-
-    it 'does not redeem the invite if token does not match' do
-      Invite.redeem_from_token("bae0071f995bb4b6f756e80b383778b5", user.email)
-      invite.reload
-      expect(invite).not_to be_redeemed
-    end
-
   end
-
 end

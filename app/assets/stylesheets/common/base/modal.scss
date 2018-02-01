@@ -1,23 +1,33 @@
 .modal-open {
   .dropdown-menu {
-     z-index: 2050;
+     z-index: z("modal","dropdown");
   }
   .popover {
-    z-index: 2060;
+    z-index: z("modal","popover");
   }
   .tooltip {
-    z-index: 2070;
+    z-index: z("modal","tooltip");
   }
 
+}
+
+.bootbox.modal {
+  position: fixed;
+  z-index: z("modal","content");
+  overflow: auto;
+  height: auto;
+  background-color: $secondary;
+  box-shadow: 0 2px 2px rgba(0,0,0, .25);
+  background-clip: padding-box;
 }
 
 .input-hint-text {
   margin-left: 0.5em;
-  color: dark-light-diff($secondary, $primary, 30%, -35%);
+  color: $secondary-high;
 }
 
 .modal-header {
-  border-bottom: 1px solid dark-light-diff($primary, $secondary, 90%, -60%);
+  border-bottom: 1px solid $primary-low;
 }
 
 .modal-backdrop {
@@ -26,7 +36,7 @@
   right: 0;
   bottom: 0;
   left: 0;
-  z-index: 1040;
+  z-index: z("modal","overlay");
   background-color: #111;
   &.fade {
     opacity: 0;
@@ -74,6 +84,10 @@
   margin: 0 auto;
   background-color: $secondary;
   background-clip: padding-box;
+
+  .select-kit {
+    width: 220px;
+  }
 }
 
 .create-account.in .modal-inner-container,
@@ -83,20 +97,29 @@
 }
 
 
-.modal {
+.inline-modal {
+  .modal-inner-container {
+    border: 1px solid $secondary-medium;
+  }
+}
+
+.fixed-modal {
   position: fixed;
   top: 0;
   width: 100%;
   height: 100%;
-  z-index: 1050;
+  z-index: z("modal","content");
   overflow: auto;
 }
 .modal-form {
   margin-bottom: 0;
 }
 .modal-footer {
-  padding: 14px 15px 15px;
-  border-top: 1px solid dark-light-diff($primary, $secondary, 90%, -60%);
+  padding: 14px 15px 10px;
+  border-top: 1px solid $primary-low;
+  .btn {
+  margin: 0 5px 5px 0;
+  }
 }
 .modal-footer:before,
 .modal-footer:after {
@@ -118,19 +141,21 @@
 .modal {
   .nav {
     padding: 10px 30px 10px 15px;
-    background-color: dark-light-diff($secondary, $primary, 10%, -15%);
+    background-color: $secondary;
     li > a {
-      font-size: 1em;
+      font-size: $font-0;
     }
-    border-bottom: 1px solid dark-light-diff($primary, $secondary, 90%, -60%);
+    border-bottom: 1px solid $primary-low;
 
   }
 
-    &.hidden {
+  &.hidden {
     display: none;
   }
 
   .modal-body {
+    box-sizing: border-box;
+    width: 100%;
     &.full-height-modal {
       max-height: calc(100vh - 150px);
     }
@@ -143,7 +168,7 @@
     }
     p {
       color: darken($primary, 40%);
-      font-size: 0.929em;
+      font-size: $font-0;
     }
     .archetype-option {
       margin-bottom: 20px;
@@ -159,7 +184,7 @@
         position: relative;
       }
       .jsfu-shade {
-        z-index: 1;
+        z-index: z("base");
         position: absolute;
         top: 0;
         left: 0;
@@ -170,9 +195,9 @@
           color: rgb(255,255,255);
           position: absolute;
           top: 40%;
-          font-size: 36px;
+          font-size: $font-up-6;
           text-align: center;
-          line-height: 38px;
+          line-height: $line-height-medium;
           margin-left: auto;
           margin-right: auto;
           left: 0;
@@ -187,7 +212,7 @@
       .jsfu-separator {
         vertical-align: middle;
         display: table-cell;
-        font-size: 36px;
+        font-size: 2.571em;
         padding-left: 10px;
         padding-right: 10px;
       }
@@ -212,57 +237,59 @@
     display: inline-block;
     margin-right: 10px;
   }
+
+  // password reset modal
+  .modal-body.forgot-password-modal p {
+    font-size: $font-0;
+  }
 }
 
 .reply-where-modal {
   .modal-footer {
+    a {
+      display: block;
+    }
+    .d-modal-cancel {
+      margin-top: 1em;
+    }
     .btn {
       text-align: left;
-      font-size: 1.286em;
-      line-height: 20px;
-      width: 310px;
+      font-size: $font-up-2;
+      line-height: $line-height-medium;
+      width: auto;
       margin-bottom: 10px;
       display: block;
       margin-left: 0 !important; // override needed
       font-weight: bold;
       .topic-title {
-        font-size: 0.929em;
+        font-size: $font-0;
         font-weight: normal;
       }
       &.btn-reply-here {
-        background: dark-light-diff($primary, $secondary, 90%, -60%);
+        background: $primary-low;
         text-shadow: none;
         color: $primary;
       }
     }
-    .cancel {
-      float: right;
-      margin-right: 5px;
-    }
   }
 }
-
+.d-modal-cancel {
+  margin-left: 1em;
+  color: $primary-medium;
+}
 
 .delete-user-modal {
   .modal-footer {
     .btn {
       font-weight: normal;
       text-align: left;
-      font-size: 1em;
-      line-height: 20px;
+      font-size: $font-0;
+      line-height: $line-height-large;
       margin-bottom: 10px;
       display: inline-block;
       margin-left: 0;
     }
-    .cancel {
-      display: block;
-      margin-right: 5px;
-    }
   }
-}
-
-.modal-footer .cancel-inline {
-  margin-left: 10px;
 }
 
 .invite-modal {
@@ -287,7 +314,7 @@
   .permission {
     margin-left: 20px;
   }
-  .fa-times-circle {
+  .d-icon-times-circle {
     margin-left: 5px;
   }
   li {
@@ -295,32 +322,11 @@
   }
 }
 
-.edit-auto-close-modal {
-  .btn.pull-right {
-    margin-right: 10px;
-  }
-  form {
-    margin: 0;
-  }
-  .auto-close-fields {
-    i.fa-clock-o {
-      font-size: 1.143em;
-    }
-    input {
-      margin: 0;
-    }
-  }
-}
-
 .edit-category-modal {
-  .auto-close-fields, .num-featured-topics-fields, .position-fields {
+  .future-date-input, .num-featured-topics-fields, .position-fields {
     input[type=text] {
       width: 50px;
     }
-  }
-
-  .auto-close-fields label {
-    font-size: .929em;
   }
 
   .subcategory-list-style-field {
@@ -340,8 +346,8 @@
 
     .cannot_delete_reason {
       position: absolute;
-      background: dark-light-choose(scale-color($primary, $lightness: 10%), scale-color($secondary, $lightness: 10%));
-      color: dark-light-choose(scale-color($primary, $lightness: 100%), scale-color($secondary, $lightness: 0%));
+      background: $primary;
+      color: $secondary;
       text-align: center;
       border-radius: 2px;
       padding: 12px 8px;
@@ -352,13 +358,12 @@
         border: solid transparent;
         content: " ";
         position: absolute;
-        border-top-color: dark-light-choose(scale-color($primary, $lightness: 10%), scale-color($secondary, $lightness: 10%));
+        border-top-color: $primary;
         border-width: 8px;
       }
     }
   }
 }
-
 
 .incoming-email-modal {
   .btn {
@@ -372,7 +377,7 @@
       font-weight: bold;
     }
     &:focus {
-      outline: 2px solid dark-light-diff($primary, $secondary, 90%, -60%);
+      outline: 2px solid $primary-low;
     }
   }
   .incoming-email-tabs {
@@ -383,13 +388,13 @@
     textarea, .incoming-email-html-part {
       height: 95%;
       border: none;
-      border-top: 1px solid dark-light-diff($primary, $secondary, 90%, -60%);
+      border-top: 1px solid $primary-low;
       padding-top: 10px;
     }
     textarea {
       font-family: monospace;
       resize: none;
-      border-radius: 0px;
+      border-radius: 0;
       box-shadow: none;
     }
     .incoming-email-html-part {
@@ -398,3 +403,10 @@
   }
 }
 
+.modal-button-bar {
+  margin-top: 1em;
+
+  button {
+    margin-right: 0.5em;
+  }
+}

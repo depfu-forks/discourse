@@ -9,15 +9,6 @@ import DecoratorHelper from 'discourse/widgets/decorator-helper';
 function emptyContent() { }
 
 const _registry = {};
-let _dirty = {};
-
-export function keyDirty(key, options) {
-  _dirty[key] = options || {};
-}
-
-export function renderedKey(key) {
-  delete _dirty[key];
-}
 
 export function queryRegistry(name) {
   return _registry[name];
@@ -100,6 +91,8 @@ function drawWidget(builder, attrs, state) {
     }
   }
 
+  this.transformed = this.transform(this.attrs, this.state);
+
   let contents = this.html(attrs, state);
   if (this.name) {
     const beforeContents = applyDecorators(this, 'before', attrs, state) || [];
@@ -121,6 +114,10 @@ export function createWidget(name, opts) {
   opts.html = opts.html || emptyContent;
   opts.draw = drawWidget;
 
+  if (opts.template) {
+    opts.html = opts.template;
+  }
+
   Object.keys(opts).forEach(k => result.prototype[k] = opts[k]);
   return result;
 }
@@ -132,7 +129,25 @@ export function reopenWidget(name, opts) {
     return;
   }
 
-  Object.keys(opts).forEach(k => existing.prototype[k] = opts[k]);
+  if (opts.template) {
+    opts.html = opts.template;
+  }
+
+  Object.keys(opts).forEach(k => {
+    let old = existing.prototype[k];
+
+    if (old) {
+      // Add support for `this._super()` to reopened widgets if the prototype exists in the
+      // base object
+      existing.prototype[k] = function(...args) {
+        let ctx = Object.create(this);
+        ctx._super = (...superArgs) => old.apply(this, superArgs);
+        return opts[k].apply(ctx, args);
+      };
+    } else {
+      existing.prototype[k] = opts[k];
+    }
+  });
   return existing;
 }
 
@@ -143,6 +158,7 @@ export default class Widget {
     this.mergeState = opts.state;
     this.model = opts.model;
     this.register = register;
+    this.dirtyKeys = opts.dirtyKeys;
 
     register.deprecateContainer(this);
 
@@ -151,7 +167,7 @@ export default class Widget {
     this.siteSettings = register.lookup('site-settings:main');
     this.currentUser = register.lookup('current-user:main');
     this.capabilities = register.lookup('capabilities:main');
-    this.store = register.lookup('store:main');
+    this.store = register.lookup('service:store');
     this.appEvents = register.lookup('app-events:main');
     this.keyValueStore = register.lookup('key-value-store:main');
 
@@ -173,6 +189,10 @@ export default class Widget {
     }
   }
 
+  transform() {
+    return {};
+  }
+
   defaultState() {
     return {};
   }
@@ -182,6 +202,8 @@ export default class Widget {
   }
 
   render(prev) {
+    const { dirtyKeys } = this;
+
     if (prev && prev.key && prev.key === this.key) {
       this.state = prev.state;
     } else {
@@ -194,14 +216,17 @@ export default class Widget {
     }
 
     if (prev) {
-      const dirtyOpts = _dirty[prev.key] || {};
+      const dirtyOpts = dirtyKeys.optionsFor(prev.key);
+
       if (prev.shadowTree) {
         this.shadowTree = true;
-        if (!dirtyOpts && !_dirty['*']) {
+        if (!dirtyOpts.dirty && !dirtyKeys.allDirty()) {
           return prev.vnode;
         }
       }
-      renderedKey(prev.key);
+      if (prev.key) {
+        dirtyKeys.renderedKey(prev.key);
+      }
 
       const refreshAction = dirtyOpts.onRefresh;
       if (refreshAction) {
@@ -239,11 +264,15 @@ export default class Widget {
         return;
       }
       WidgetClass = this.register.lookupFactory(`widget:${widgetName}`);
+      if (WidgetClass && WidgetClass.class) {
+        WidgetClass = WidgetClass.class;
+      }
     }
 
     if (WidgetClass) {
       const result = new WidgetClass(attrs, this.register, opts);
       result.parentWidget = this;
+      result.dirtyKeys = this.dirtyKeys;
       return result;
     } else {
       throw `Couldn't find ${widgetName} factory`;
@@ -254,7 +283,7 @@ export default class Widget {
     let widget = this;
     while (widget) {
       if (widget.shadowTree) {
-        keyDirty(widget.key);
+        this.dirtyKeys.keyDirty(widget.key);
       }
 
       const rerenderable = widget._rerenderable;
@@ -281,7 +310,7 @@ export default class Widget {
         view.sendAction(method, param);
         promise = Ember.RSVP.resolve();
       } else {
-        const target = view.get('targetObject');
+        const target = view.get('targetObject') || view;
         promise = method.call(target, param);
         if (!promise || !promise.then) {
           promise = Ember.RSVP.resolve(promise);

@@ -6,8 +6,11 @@ import { emailValid } from 'discourse/lib/utilities';
 import InputValidation from 'discourse/models/input-validation';
 import PasswordValidation from "discourse/mixins/password-validation";
 import UsernameValidation from "discourse/mixins/username-validation";
+import NameValidation from "discourse/mixins/name-validation";
+import UserFieldsValidation from "discourse/mixins/user-fields-validation";
+import { userPath } from 'discourse/lib/url';
 
-export default Ember.Controller.extend(ModalFunctionality, PasswordValidation, UsernameValidation, {
+export default Ember.Controller.extend(ModalFunctionality, PasswordValidation, UsernameValidation, NameValidation, UserFieldsValidation, {
   login: Ember.inject.controller(),
 
   complete: false,
@@ -48,19 +51,10 @@ export default Ember.Controller.extend(ModalFunctionality, PasswordValidation, U
     if (this.get('emailValidation.failed')) return true;
     if (this.get('usernameValidation.failed')) return true;
     if (this.get('passwordValidation.failed')) return true;
+    if (this.get('userFieldsValidation.failed')) return true;
 
-    // Validate required fields
-    let userFields = this.get('userFields');
-    if (userFields) { userFields = userFields.filterBy('field.required'); }
-    if (!Ember.isEmpty(userFields)) {
-      const anyEmpty = userFields.any(function(uf) {
-        const val = uf.get('value');
-        return !val || Ember.isEmpty(val);
-      });
-      if (anyEmpty) { return true; }
-    }
     return false;
-  }.property('passwordRequired', 'nameValidation.failed', 'emailValidation.failed', 'usernameValidation.failed', 'passwordValidation.failed', 'formSubmitted', 'userFields.@each.value'),
+  }.property('passwordRequired', 'nameValidation.failed', 'emailValidation.failed', 'usernameValidation.failed', 'passwordValidation.failed', 'userFieldsValidation.failed', 'formSubmitted'),
 
 
   usernameRequired: Ember.computed.not('authOptions.omit_username'),
@@ -79,19 +73,6 @@ export default Ember.Controller.extend(ModalFunctionality, PasswordValidation, U
       privacy_link: this.get('siteSettings.privacy_policy_url') || Discourse.getURL('/privacy')
     });
   }.property(),
-
-  nameInstructions: function() {
-    return I18n.t(Discourse.SiteSettings.full_name_required ? 'user.name.instructions_required' : 'user.name.instructions');
-  }.property(),
-
-  // Validate the name.
-  nameValidation: function() {
-    if (Discourse.SiteSettings.full_name_required && Ember.isEmpty(this.get('accountName'))) {
-      return InputValidation.create({ failed: true });
-    }
-
-    return InputValidation.create({ok: true});
-  }.property('accountName'),
 
   // Check the email address
   emailValidation: function() {
@@ -164,7 +145,7 @@ export default Ember.Controller.extend(ModalFunctionality, PasswordValidation, U
 
   @on('init')
   fetchConfirmationValue() {
-    return ajax('/users/hp.json').then(json => {
+    return ajax(userPath('hp.json')).then(json => {
       this.set('accountPasswordConfirm', json.value);
       this.set('accountChallenge', json.challenge.split("").reverse().join(""));
     });
@@ -196,7 +177,7 @@ export default Ember.Controller.extend(ModalFunctionality, PasswordValidation, U
           const $hidden_login_form = $('#hidden-login-form');
           $hidden_login_form.find('input[name=username]').val(attrs.accountUsername);
           $hidden_login_form.find('input[name=password]').val(attrs.accountPassword);
-          $hidden_login_form.find('input[name=redirect]').val(Discourse.getURL('/users/account-created'));
+          $hidden_login_form.find('input[name=redirect]').val(userPath('account-created'));
           $hidden_login_form.submit();
         } else {
           self.flash(result.message || I18n.t('create_account.failed'), 'error');
@@ -219,18 +200,6 @@ export default Ember.Controller.extend(ModalFunctionality, PasswordValidation, U
         return self.flash(I18n.t('create_account.failed'), 'error');
       });
     }
-  },
-
-  _createUserFields: function() {
-    if (!this.site) { return; }
-
-    let userFields = this.site.get('user_fields');
-    if (userFields) {
-      userFields = _.sortBy(userFields, 'position').map(function(f) {
-        return Ember.Object.create({ value: null, field: f });
-      });
-    }
-    this.set('userFields', userFields);
-  }.on('init')
+  }
 
 });

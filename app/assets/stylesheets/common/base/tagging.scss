@@ -17,13 +17,16 @@
   width: 300px;
   margin-bottom: 1em;
   float: left;
+  vertical-align: middle;
 
   .discourse-tag {
-    font-size: 1em;
+    font-size: $font-0;
   }
 
   .tag-count {
-    font-size: 0.9em;
+    font-size: $font-down-1;
+    vertical-align: middle;   
+    line-height: $line-height-small; 
   }
 }
 
@@ -34,55 +37,90 @@
 
 .bullet + .topic-header-extra {
   display: block;
-  line-height: 15px;
-  font-size: 12px;
-  .list-tags { font-size: 12px; }
-}
-
-.bar + .topic-header-extra {
-  line-height: 1.25;
 }
 
 .box + .topic-header-extra {
   display: inline-block;
-  margin: 0 0 0 5px;
-  padding-top: 5px;
+}
+
+.topic-category {
+  margin-top: 5px;
+
+  .topic-header-extra {
+    display: inline-block;
+    vertical-align: baseline;
+  }
+
+  .badge-wrapper {
+    margin-top: 0;
+
+    &.bullet .badge-category {
+      vertical-align: middle;
+    }
+
+    &.box, &.bullet {
+      vertical-align: middle;
+    }
+    
+    &.box + .topic-header-extra,
+    &.bullet + .topic-header-extra,
+    &.bar + .topic-header-extra {
+      vertical-align: middle;
+    }
+  }
 }
 
 .add-tags .select2 {
   margin: 0;
 }
 
-$tag-color: scale-color($primary, $lightness: 40%);
+$tag-color: $primary-medium;
 
 .discourse-tag-count {
-  font-size: 0.8em;
+  font-size: $font-down-1;
   color: $tag-color;
+  line-height: $line-height-small;
+  vertical-align: middle;  
 }
 
 .select2-result-label .discourse-tag {
   margin-right: 0;
 }
 
+.discourse-tag {
+  max-width: 14em; 
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
 
 .discourse-tag {
-  padding: 0;
-  margin: 0 5px 0 0;
+  margin: 0;
   color: $tag-color;
 
   &:visited, &:hover {
     color: $tag-color;
   }
 
+  .extra-info-wrapper & {
+    color: $header-primary !important;
+  }
+
   &.box {
-    background-color: scale-color($primary, $lightness: 90%);
-    color: scale-color($primary, $lightness: 30%);
+    background-color: $primary-low;
+    color: $primary-high;
     padding: 2px 8px;
+    .extra-info-wrapper & {
+      background-color: $header_primary-low;
+      color: $header_primary-medium;
+    }
   }
 
   &.simple, &.simple:visited, &.simple:hover {
-    margin-right: 0px;
-    color: scale-color($primary, $lightness: 30%);
+    margin-right: 0;
+    color: $primary-high;
   }
 }
 
@@ -93,13 +131,27 @@ $tag-color: scale-color($primary, $lightness: 40%);
   }
 }
 
+.d-header .topic-header-extra {
+  .discourse-tags { 
+    display: inline-block; 
+    font-size: $font-down-1;        
+  }
+  .topic-featured-link { margin-left: 8px; }
+}
+
 .select2-container-multi .select2-choices .select2-search-choice.discourse-tag-select2 {
-  padding-top: 5px;
   -webkit-box-shadow: none;
   box-shadow: none;
   border: 0;
   border-radius: 0;
   background-color: transparent;
+  .discourse-tag {
+    padding: 4px;
+    &.box {
+      padding: 1px 8px;
+      margin: 3px 5px;
+    }
+  }
 }
 
 
@@ -109,10 +161,9 @@ $tag-color: scale-color($primary, $lightness: 40%);
 
 .topic-list-item .discourse-tags {
   display: block;
-  font-size: 0.75em;
+  font-size: $font-down-2;
   font-weight: normal;
   clear: both;
-  margin-top: 5px;
 
   .discourse-tag.box {
     position:relative;
@@ -126,7 +177,7 @@ $tag-color: scale-color($primary, $lightness: 40%);
 
 .mobile-view .topic-list-item .discourse-tags {
   display: inline-block;
-  font-size: 0.9em;
+  font-size: $font-down-1;
   margin-top: 0;
   .discourse-tag.box {
     position:relative;
@@ -135,28 +186,34 @@ $tag-color: scale-color($primary, $lightness: 40%);
 }
 
 
-
-.discourse-tag.bullet:before {
-  content: "\f04d";
-  font-family: FontAwesome;
-  color: scale-color($primary, $lightness: 70%);
-  margin-right: 5px;
-  font-size: 0.7em;
-  position:relative;
-  top: -0.1em;
+.discourse-tag.bullet {
+  margin-right: .25em;
+  &:before {
+    content: "\f04d";
+    font-family: FontAwesome;
+    color: $primary-low-mid;
+    margin-right: 5px;
+    font-size: $font-down-2;
+    position:relative;
+  }
 }
 
 header .discourse-tag {color: $tag-color }
 
 .list-tags {
   margin-right: 3px;
-  display: inline;
-  font-size: 0.857em;
+  font-size: $font-down-1;
 }
 
 .tag-chooser {
   width: 100%;
+  max-width: 100%;
   margin: 5px 0;
+  ul.select2-choices {
+    max-height: 30px;
+    padding-left: 10px;    
+    overflow-y: auto;
+  }
 }
 
 .title-wrapper .tag-chooser {
@@ -169,18 +226,6 @@ header .discourse-tag {color: $tag-color }
   margin-right: 8px;
 }
 
-.notification-options.tag-notification-menu {
-  float: right;
-  margin-bottom: 10px;
-}
-
-.tag-notification-menu .dropdown-menu {
-  right: 0;
-  top: 30px;
-  bottom: auto;
-  left: auto;
-}
-
 .tag-sort-options {
   margin-bottom: 20px;
   a {
@@ -189,8 +234,8 @@ header .discourse-tag {color: $tag-color }
 }
 
 .autocomplete {
-  .fa-tag {
-   color: dark-light-choose($primary, scale-color($primary, $lightness: 70%));
+  .d-icon-tag {
+   color: dark-light-choose($primary, $primary-low-mid);
    padding-right: 5px;
   }
 
@@ -223,7 +268,7 @@ header .discourse-tag {color: $tag-color }
       margin-bottom: 20px;
     }
     label {
-      font-size: 1em;
+      font-size: $font-0;
       display: inline-block;
       margin-right: 10px;
     }

@@ -142,9 +142,9 @@ Badge.seed do |b|
 end
 
 [
-  [Badge::Promoter,"Promoter",BadgeType::Bronze,1,0],
-  [Badge::Campaigner,"Campaigner",BadgeType::Silver,3,1],
-  [Badge::Champion,"Champion",BadgeType::Gold,5,2],
+  [Badge::Promoter, "Promoter", BadgeType::Bronze, 1, 0],
+  [Badge::Campaigner, "Campaigner", BadgeType::Silver, 3, 1],
+  [Badge::Champion, "Champion", BadgeType::Gold, 5, 2],
 ].each do |id, name, type, count, trust_level|
   Badge.seed do |b|
     b.id = id
@@ -154,7 +154,7 @@ end
     b.multiple_grant = false
     b.target_posts = false
     b.show_posts = false
-    b.query = BadgeQueries.invite_badge(count,trust_level)
+    b.query = BadgeQueries.invite_badge(count, trust_level)
     b.default_badge_grouping_id = BadgeGrouping::Community
     # daily is good enough
     b.trigger = Badge::Trigger::None
@@ -256,15 +256,16 @@ end
 end
 
 Badge.seed do |b|
-  b.id = Badge::OneYearAnniversary
+  b.id = Badge::Anniversary
   b.name = "Anniversary"
   b.default_icon = "fa-clock-o"
   b.badge_type_id = BadgeType::Silver
-  b.query = BadgeQueries::OneYearAnniversary
   b.default_badge_grouping_id = BadgeGrouping::Community
+  b.query = nil
   b.trigger = Badge::Trigger::None
   b.auto_revoke = false
   b.system = true
+  b.multiple_grant = true
 end
 
 [
@@ -305,7 +306,6 @@ end
     b.system = true
   end
 end
-
 
 [
   [Badge::ThankYou,   "Thank You",  BadgeType::Bronze, 20, 10],
@@ -399,6 +399,39 @@ Badge.seed do |b|
   b.default_badge_grouping_id = BadgeGrouping::GettingStarted
   b.trigger = Badge::Trigger::None
   b.system = true
+end
+
+Badge.seed do |b|
+  b.id = Badge::NewUserOfTheMonth
+  b.name = "New User of the Month"
+  b.badge_type_id = BadgeType::Bronze
+  b.multiple_grant = false
+  b.target_posts = false
+  b.show_posts = false
+  b.query = nil
+  b.badge_grouping_id = BadgeGrouping::GettingStarted
+  b.default_badge_grouping_id = BadgeGrouping::GettingStarted
+  b.trigger = Badge::Trigger::None
+  b.system = true
+end
+
+[
+  [Badge::Enthusiast, "Enthusiast", BadgeType::Bronze, 10],
+  [Badge::Aficionado, "Aficionado", BadgeType::Silver, 100],
+  [Badge::Devotee,    "Devotee",    BadgeType::Gold,   365],
+].each do |id, name, level, days|
+  Badge.seed do |b|
+    b.id = id
+    b.name = name
+    b.default_icon = "fa-eye"
+    b.badge_type_id = level
+    b.query = BadgeQueries.consecutive_visits(days)
+    b.badge_grouping_id = BadgeGrouping::Community
+    b.default_badge_grouping_id = BadgeGrouping::Community
+    b.trigger = Badge::Trigger::None
+    b.auto_revoke = false
+    b.system = true
+  end
 end
 
 Badge.where("NOT system AND id < 100").each do |badge|

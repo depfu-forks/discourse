@@ -62,6 +62,7 @@ const SiteHeaderComponent = MountWidget.extend(Docking, {
 
     this.dispatch('notifications:changed', 'user-notifications');
     this.dispatch('header:keyboard-trigger', 'header');
+    this.dispatch('search-autocomplete:after-complete', 'search-term');
 
     this.appEvents.on('dom:clean', () => {
       // For performance, only trigger a re-render if any menu panels are visible
@@ -138,7 +139,7 @@ const SiteHeaderComponent = MountWidget.extend(Docking, {
         if ($panelBody.height() !== contentHeight) {
           $panelBody.height(contentHeight);
         }
-        $('body').addClass('drop-down-visible');
+        $('body').addClass('drop-down-mode');
       } else {
         const menuTop = headerHeight();
 
@@ -156,7 +157,7 @@ const SiteHeaderComponent = MountWidget.extend(Docking, {
         if (style.top !== menuTop + "px" || style.height !== height) {
           $panel.css({ top: menuTop + "px", height });
         }
-        $('body').removeClass('drop-down-visible');
+        $('body').removeClass('drop-down-mode');
       }
 
       $panel.width(width);

@@ -1,5 +1,7 @@
 import { escape } from 'pretty-text/sanitizer';
 
+const homepageSelector = 'meta[name=discourse_current_homepage]';
+
 export function translateSize(size) {
   switch (size) {
     case 'tiny': return 20;
@@ -20,6 +22,17 @@ export function escapeExpression(string) {
 
   return escape(string);
 }
+
+let _usernameFormatDelegate = username => username;
+
+export function formatUsername(username) {
+  return _usernameFormatDelegate(username || '');
+}
+
+export function replaceFormatter(fn) {
+  _usernameFormatDelegate = fn;
+}
+
 
 export function avatarUrl(template, size) {
   if (!template) { return ""; }
@@ -65,10 +78,6 @@ export function postUrl(slug, topicId, postNumber) {
   return url;
 }
 
-export function userUrl(username) {
-  return Discourse.getURL("/users/" + username.toLowerCase());
-}
-
 export function emailValid(email) {
   // see:  http://stackoverflow.com/questions/46155/validate-email-address-in-javascript
   const re = /^[a-zA-Z0-9!#$%&'*+\/=?\^_`{|}~\-]+(?:\.[a-zA-Z0-9!#$%&'\*+\/=?\^_`{|}~\-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-]*[a-zA-Z0-9])?$/;
@@ -106,8 +115,10 @@ export function selectedText() {
   $div.find("img.emoji").replaceWith(function() { return this.title; });
   // replace br with newlines
   $div.find("br").replaceWith(() => "\n");
+  // enforce newline at the end of paragraphs
+  $div.find("p").append(() => "\n");
 
-  return String($div.text()).trim();
+  return String($div.text()).trim().replace(/(^\s*\n)+/gm, "\n");
 }
 
 // Determine the row and col of the caret in an element
@@ -176,12 +187,14 @@ export function validateUploadedFiles(files, opts) {
   }
 
   opts = opts || {};
-  opts["type"] = uploadTypeFromFileName(upload.name);
+  opts.type = uploadTypeFromFileName(upload.name);
 
   return validateUploadedFile(upload, opts);
 }
 
 export function validateUploadedFile(file, opts) {
+  if (!authorizesOneOrMoreExtensions()) return false;
+
   opts = opts || {};
 
   const name = file && file.name;
@@ -189,12 +202,18 @@ export function validateUploadedFile(file, opts) {
   if (!name) { return false; }
 
   // check that the uploaded file is authorized
-  if (opts["imagesOnly"]) {
+  if (opts.allowStaffToUploadAnyFileInPm && opts.isPrivateMessage) {
+    if (Discourse.User.current("staff")) {
+      return true;
+    }
+  }
+
+  if (opts.imagesOnly) {
     if (!isAnImage(name) && !isAuthorizedImage(name)) {
       bootbox.alert(I18n.t('post.errors.upload_not_authorized', { authorized_extensions: authorizedImagesExtensions() }));
       return false;
     }
-  } else if (opts["csvOnly"]) {
+  } else if (opts.csvOnly) {
     if (!(/\.csv$/i).test(name)) {
       bootbox.alert(I18n.t('user.invited.bulk_invite.error'));
       return false;
@@ -206,10 +225,10 @@ export function validateUploadedFile(file, opts) {
     }
   }
 
-  if (!opts["bypassNewUserRestriction"]) {
+  if (!opts.bypassNewUserRestriction) {
     // ensures that new users can upload a file
-    if (!Discourse.User.current().isAllowedToUploadAFile(opts["type"])) {
-      bootbox.alert(I18n.t(`post.errors.${opts["type"]}_upload_not_allowed_for_new_user`));
+    if (!Discourse.User.current().isAllowedToUploadAFile(opts.type)) {
+      bootbox.alert(I18n.t(`post.errors.${opts.type}_upload_not_allowed_for_new_user`));
       return false;
     }
   }
@@ -260,12 +279,42 @@ export function authorizesAllExtensions() {
   return Discourse.SiteSettings.authorized_extensions.indexOf("*") >= 0;
 }
 
+export function authorizesOneOrMoreExtensions() {
+  if (authorizesAllExtensions()) return true;
+
+  return Discourse.SiteSettings.authorized_extensions
+          .split("|")
+          .filter(ext => ext)
+          .length > 0;
+}
+
+export function authorizesOneOrMoreImageExtensions() {
+  if (authorizesAllExtensions()) return true;
+
+  return imagesExtensions().length > 0;
+}
+
 export function isAnImage(path) {
   return (/\.(png|jpe?g|gif|bmp|tiff?|svg|webp|ico)$/i).test(path);
 }
 
 function uploadTypeFromFileName(fileName) {
   return isAnImage(fileName) ? 'image' : 'attachment';
+}
+
+function isGUID(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+function imageNameFromFileName(fileName) {
+  const split = fileName.split('.');
+  let name = split[split.length - 2];
+
+  if (exports.isAppleDevice() && isGUID(name)) {
+    name = I18n.t('upload_selector.default_image_alt_text');
+  }
+
+  return encodeURIComponent(name);
 }
 
 export function allowsImages() {
@@ -292,7 +341,8 @@ export function uploadLocation(url) {
 
 export function getUploadMarkdown(upload) {
   if (isAnImage(upload.original_filename)) {
-    return '<img src="' + upload.url + '" width="' + upload.width + '" height="' + upload.height + '">';
+    const name = imageNameFromFileName(upload.original_filename);
+    return `![${name}|${upload.width}x${upload.height}](${upload.short_url || upload.url})`;
   } else if (!Discourse.SiteSettings.prevent_anons_from_downloading_files && (/\.(mov|mp4|webm|ogv|mp3|ogg|wav|m4a)$/i).test(upload.original_filename)) {
     return uploadLocation(upload.url);
   } else {
@@ -301,27 +351,27 @@ export function getUploadMarkdown(upload) {
 }
 
 export function displayErrorForUpload(data) {
-  // deal with meaningful errors first
   if (data.jqXHR) {
     switch (data.jqXHR.status) {
       // cancelled by the user
-      case 0: return;
+      case 0:
+        return;
 
-              // entity too large, usually returned from the web server
+      // entity too large, usually returned from the web server
       case 413:
-              var type = uploadTypeFromFileName(data.files[0].name);
-              var maxSizeKB = Discourse.SiteSettings['max_' + type + '_size_kb'];
-              bootbox.alert(I18n.t('post.errors.file_too_large', { max_size_kb: maxSizeKB }));
-              return;
+        const type = uploadTypeFromFileName(data.files[0].name);
+        const max_size_kb = Discourse.SiteSettings[`max_${type}_size_kb`];
+        bootbox.alert(I18n.t('post.errors.file_too_large', { max_size_kb }));
+        return;
 
-              // the error message is provided by the server
+      // the error message is provided by the server
       case 422:
-              if (data.jqXHR.responseJSON.message) {
-                bootbox.alert(data.jqXHR.responseJSON.message);
-              } else {
-                bootbox.alert(data.jqXHR.responseJSON.join("\n"));
-              }
-              return;
+        if (data.jqXHR.responseJSON.message) {
+          bootbox.alert(data.jqXHR.responseJSON.message);
+        } else {
+          bootbox.alert(data.jqXHR.responseJSON.join("\n"));
+        }
+        return;
     }
   } else if (data.errors && data.errors.length > 0) {
     bootbox.alert(data.errors.join("\n"));
@@ -332,8 +382,22 @@ export function displayErrorForUpload(data) {
 }
 
 export function defaultHomepage() {
-  // the homepage is the first item of the 'top_menu' site setting
-  return Discourse.SiteSettings.top_menu.split("|")[0].split(",")[0];
+  let homepage = null;
+  let elem = _.first($(homepageSelector));
+  if (elem) {
+    homepage = elem.content;
+  }
+  if (!homepage) {
+    homepage = Discourse.SiteSettings.top_menu.split("|")[0].split(",")[0];
+  }
+  return homepage;
+}
+
+export function setDefaultHomepage(homepage) {
+  let elem = _.first($(homepageSelector));
+  if (elem) {
+    elem.content = homepage;
+  }
 }
 
 export function determinePostReplaceSelection({ selection, needle, replacement }) {
@@ -364,6 +428,63 @@ export function determinePostReplaceSelection({ selection, needle, replacement }
     // Selection starts (and ends) behind needle.
     return { start: selection.start + diff, end: selection.end + diff };
   }
+}
+
+export function isAppleDevice() {
+  // IE has no DOMNodeInserted so can not get this hack despite saying it is like iPhone
+  // This will apply hack on all iDevices
+  return navigator.userAgent.match(/(iPad|iPhone|iPod)/g) &&
+    navigator.userAgent.match(/Safari/g) &&
+    !navigator.userAgent.match(/Trident/g);
+}
+
+const toArray = items => {
+  items = items || [];
+
+  if (!Array.isArray(items)) {
+    return Array.from(items);
+  }
+
+  return items;
+};
+
+export function clipboardData(e, canUpload) {
+  const clipboard = e.clipboardData ||
+                      e.originalEvent.clipboardData ||
+                      e.delegatedEvent.originalEvent.clipboardData;
+
+  const types = toArray(clipboard.types);
+  let files = toArray(clipboard.files);
+
+  if (types.includes("Files") && files.length === 0) { // for IE
+    files = toArray(clipboard.items).filter(i => i.kind === "file");
+  }
+
+  canUpload = files && canUpload && !types.includes("text/plain");
+  const canUploadImage = canUpload && files.filter(f => f.type.match('^image/'))[0];
+  const canPasteHtml = Discourse.SiteSettings.enable_rich_text_paste && types.includes("text/html") && !canUploadImage;
+
+  return { clipboard, types, canUpload, canPasteHtml };
+}
+
+export function fillMissingDates(data, startDate, endDate) {
+  const startMoment = moment(startDate, "YYYY-MM-DD");
+  const endMoment = moment(endDate, "YYYY-MM-DD");
+  const countDays = endMoment.diff(startMoment, 'days');
+  let currentMoment = startMoment;
+
+  for (let i = 0; i <= countDays; i++) {
+    let date = (data[i]) ? moment(data[i].x, "YYYY-MM-DD") : null;
+    if (i === 0 && date.isAfter(startMoment)) {
+      data.splice(i, 0, { "x" : startMoment.format("YYYY-MM-DD"), 'y': 0 });
+    } else {
+      if (!date || date.isAfter(moment(currentMoment))) {
+        data.splice(i, 0, { "x" : currentMoment, 'y': 0 });
+      }
+    }
+    currentMoment = moment(currentMoment).add(1, "day").format("YYYY-MM-DD");
+  }
+  return data;
 }
 
 // This prevents a mini racer crash

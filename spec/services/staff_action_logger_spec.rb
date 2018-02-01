@@ -129,46 +129,56 @@ describe StaffActionLogger do
     end
   end
 
-  describe "log_site_customization_change" do
-    let(:valid_params) { {name: 'Cool Theme', stylesheet: "body {\n  background-color: blue;\n}\n", header: "h1 {color: white;}"} }
+  describe "log_theme_change" do
 
     it "raises an error when params are invalid" do
-      expect { logger.log_site_customization_change(nil, nil) }.to raise_error(Discourse::InvalidParameters)
+      expect { logger.log_theme_change(nil, nil) }.to raise_error(Discourse::InvalidParameters)
+    end
+
+    let :theme do
+      Theme.new(name: 'bob', user_id: -1)
     end
 
     it "logs new site customizations" do
-      log_record = logger.log_site_customization_change(nil, valid_params)
-      expect(log_record.subject).to eq(valid_params[:name])
+
+      log_record = logger.log_theme_change(nil, theme)
+      expect(log_record.subject).to eq(theme.name)
       expect(log_record.previous_value).to eq(nil)
       expect(log_record.new_value).to be_present
+
       json = ::JSON.parse(log_record.new_value)
-      expect(json['stylesheet']).to be_present
-      expect(json['header']).to be_present
+      expect(json['name']).to eq(theme.name)
     end
 
     it "logs updated site customizations" do
-      existing = SiteCustomization.new(name: 'Banana', stylesheet: "body {color: yellow;}", header: "h1 {color: brown;}")
-      log_record = logger.log_site_customization_change(existing, valid_params)
+      old_json = ThemeSerializer.new(theme, root: false).to_json
+
+      theme.set_field(target: :common, name: :scss, value: "body{margin: 10px;}")
+
+      log_record = logger.log_theme_change(old_json, theme)
+
       expect(log_record.previous_value).to be_present
-      json = ::JSON.parse(log_record.previous_value)
-      expect(json['stylesheet']).to eq(existing.stylesheet)
-      expect(json['header']).to eq(existing.header)
+
+      json = ::JSON.parse(log_record.new_value)
+      expect(json['theme_fields']).to eq([{ "name" => "scss", "target" => "common", "value" => "body{margin: 10px;}", "type_id" => 1 }])
     end
   end
 
-  describe "log_site_customization_destroy" do
+  describe "log_theme_destroy" do
     it "raises an error when params are invalid" do
-      expect { logger.log_site_customization_destroy(nil) }.to raise_error(Discourse::InvalidParameters)
+      expect { logger.log_theme_destroy(nil) }.to raise_error(Discourse::InvalidParameters)
     end
 
     it "creates a new UserHistory record" do
-      site_customization = SiteCustomization.new(name: 'Banana', stylesheet: "body {color: yellow;}", header: "h1 {color: brown;}")
-      log_record = logger.log_site_customization_destroy(site_customization)
+      theme = Theme.new(name: 'Banana')
+      theme.set_field(target: :common, name: :scss, value: "body{margin: 10px;}")
+
+      log_record = logger.log_theme_destroy(theme)
       expect(log_record.previous_value).to be_present
       expect(log_record.new_value).to eq(nil)
       json = ::JSON.parse(log_record.previous_value)
-      expect(json['stylesheet']).to eq(site_customization.stylesheet)
-      expect(json['header']).to eq(site_customization.header)
+
+      expect(json['theme_fields']).to eq([{ "name" => "scss", "target" => "common", "value" => "body{margin: 10px;}", "type_id" => 1 }])
     end
   end
 
@@ -268,11 +278,9 @@ describe StaffActionLogger do
     end
 
     it "creates the UserHistory record" do
-      logged = logger.log_custom('clicked_something', {
-        evil: 'trout',
-        clicked_on: 'thing',
-        topic_id: 1234
-      })
+      logged = logger.log_custom('clicked_something',         evil: 'trout',
+                                                              clicked_on: 'thing',
+                                                              topic_id: 1234)
       expect(logged).to be_valid
       expect(logged.details).to eq("evil: trout\nclicked_on: thing")
       expect(logged.action).to eq(UserHistory.actions[:custom_staff])
@@ -298,7 +306,7 @@ describe StaffActionLogger do
       category.update!(attributes)
 
       logger.log_category_settings_change(category, attributes,
-        { category_group.group_name => category_group.permission_type }
+        category_group.group_name => category_group.permission_type
       )
 
       expect(UserHistory.count).to eq(2)
@@ -321,7 +329,7 @@ describe StaffActionLogger do
       old_permission = category.permissions_params
       category.update!(attributes)
 
-      logger.log_category_settings_change(category, attributes.merge({ permissions: { "everyone" => 1 } }), old_permission)
+      logger.log_category_settings_change(category, attributes.merge(permissions: { "everyone" => 1 }), old_permission)
 
       expect(UserHistory.count).to eq(1)
       expect(UserHistory.find_by_subject('name').category).to eq(category)
@@ -377,12 +385,12 @@ describe StaffActionLogger do
     end
 
     it "creates a new UserHistory record" do
-      user.trust_level_locked = true
+      user.manual_locked_trust_level = 3
       expect { logger.log_lock_trust_level(user) }.to change { UserHistory.count }.by(1)
       user_history = UserHistory.last
       expect(user_history.action).to eq(UserHistory.actions[:lock_trust_level])
 
-      user.trust_level_locked = false
+      user.manual_locked_trust_level = nil
       expect { logger.log_lock_trust_level(user) }.to change { UserHistory.count }.by(1)
       user_history = UserHistory.last
       expect(user_history.action).to eq(UserHistory.actions[:unlock_trust_level])
@@ -424,6 +432,24 @@ describe StaffActionLogger do
       expect(user_history.action).to eq(UserHistory.actions[:change_readonly_mode])
       expect(user_history.new_value).to eq('f')
       expect(user_history.previous_value).to eq('t')
+    end
+  end
+
+  describe 'log_check_personal_message' do
+    let(:personal_message) { Fabricate(:private_message_topic) }
+
+    subject(:log_check_personal_message) { described_class.new(admin).log_check_personal_message(personal_message) }
+
+    it 'raises an error when topic is nil' do
+      expect { logger.log_check_personal_message(nil) }.to raise_error(Discourse::InvalidParameters)
+    end
+
+    it 'raises an error when topic is not a Topic' do
+      expect { logger.log_check_personal_message(1) }.to raise_error(Discourse::InvalidParameters)
+    end
+
+    it 'creates a new UserHistory record' do
+      expect { log_check_personal_message }.to change { UserHistory.count }.by(1)
     end
   end
 end

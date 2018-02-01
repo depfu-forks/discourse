@@ -8,7 +8,7 @@ module Jobs
       end
 
       web_hook = WebHook.find_by(id: args[:web_hook_id])
-      raise Discourse::InvalidParameters(:web_hook_id) if web_hook.blank?
+      raise Discourse::InvalidParameters.new(:web_hook_id) if web_hook.blank?
 
       unless ping_event?(args[:event_type])
         return unless web_hook.active?
@@ -56,7 +56,6 @@ module Jobs
 
     def build_web_hook_body(args, web_hook)
       body = {}
-      guardian = Guardian.new(Discourse.system_user)
       event_type = args[:event_type].to_s
 
       if ping_event?(event_type)
@@ -71,7 +70,7 @@ module Jobs
     end
 
     def web_hook_request(args, web_hook)
-      uri = URI(web_hook.payload_url)
+      uri = URI(web_hook.payload_url.strip)
 
       conn = Excon.new(
         uri.to_s,
@@ -83,12 +82,13 @@ module Jobs
       web_hook_event = WebHookEvent.create!(web_hook_id: web_hook.id)
 
       begin
-        content_type = case web_hook.content_type
-                       when WebHook.content_types['application/x-www-form-urlencoded']
-                         'application/x-www-form-urlencoded'
-                       else
-                         'application/json'
-                       end
+        content_type =
+          case web_hook.content_type
+          when WebHook.content_types['application/x-www-form-urlencoded']
+            'application/x-www-form-urlencoded'
+          else
+            'application/json'
+          end
 
         headers = {
           'Accept' => '*/*',

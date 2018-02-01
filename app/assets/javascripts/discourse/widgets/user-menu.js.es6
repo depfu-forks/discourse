@@ -1,5 +1,7 @@
 import { createWidget } from 'discourse/widgets/widget';
 import { h } from 'virtual-dom';
+import { formatUsername } from 'discourse/lib/utilities';
+import hbs from 'discourse/widgets/hbs-compiler';
 
 let extraGlyphs;
 
@@ -23,9 +25,14 @@ createWidget('user-menu-links', {
     const glyphs = [];
 
     if (extraGlyphs) {
-      // yes glyphs.push(...extraGlyphs) is nicer, but pulling in
-      // _toConsumableArray seems totally uneeded here
-      glyphs.push.apply(glyphs, extraGlyphs);
+      extraGlyphs.forEach(g => {
+        if (typeof g === "function") {
+          g = g(this);
+        }
+        if (g) {
+          glyphs.push(g);
+        }
+      });
     }
 
     glyphs.push({ label: 'user.bookmarks',
@@ -33,7 +40,7 @@ createWidget('user-menu-links', {
                       icon: 'bookmark',
                       href: `${path}/activity/bookmarks` });
 
-    if (siteSettings.enable_private_messages) {
+    if (siteSettings.enable_personal_messages) {
       glyphs.push({ label: 'user.private_messages',
                     className: 'user-pms-link',
                     icon: 'envelope',
@@ -45,7 +52,7 @@ createWidget('user-menu-links', {
       model: currentUser,
       className: 'user-activity-link',
       icon: 'user',
-      rawLabel: currentUser.username
+      rawLabel: formatUsername(currentUser.username)
     };
 
     if (currentUser.is_anonymous) {
@@ -72,7 +79,7 @@ createWidget('user-menu-links', {
     glyphs.push({ label: 'user.preferences',
                   className: 'user-preferences-link',
                   icon: 'gear',
-                  href: `${path}/preferences` });
+                  href: `${path}/preferences/account` });
 
     return h('ul.menu-links-row', [
              links.map(l => h('li', this.attach('link', l))),
@@ -81,25 +88,91 @@ createWidget('user-menu-links', {
   }
 });
 
+createWidget('user-menu-dismiss-link', {
+  tagName: 'div.dismiss-link',
+
+  template: hbs`
+    <ul class='menu-links'>
+      <li>
+        {{attach
+          widget="link"
+          attrs=(hash
+            action="dismissNotifications"
+            className="dismiss"
+            icon="check"
+            label="user.dismiss"
+            title="user.dismiss_notifications_tooltip")}}
+      </li>
+    </ul>
+  `,
+});
+
 export default createWidget('user-menu', {
   tagName: 'div.user-menu',
+  buildKey: () => 'user-menu',
+
+  settings: {
+    maxWidth: 300,
+    showLogoutButton: true
+  },
+
+  defaultState() {
+    return {
+      hasUnread: false,
+      markUnread: null
+    };
+  },
 
   panelContents() {
     const path = this.currentUser.get('path');
 
-    return [this.attach('user-menu-links', { path }),
-            this.attach('user-notifications', { path }),
-            h('div.logout-link', [
-              h('ul.menu-links',
-                h('li', this.attach('link', { action: 'logout',
-                                                       className: 'logout',
-                                                       icon: 'sign-out',
-                                                       label: 'user.log_out' })))
-              ])];
+    let result = [
+      this.attach('user-menu-links', { path }),
+      this.attach('user-notifications', { path })
+    ];
+
+    if (this.settings.showLogoutButton || this.state.hasUnread) {
+      result.push(h('hr.bottom-area'));
+    }
+
+    if (this.settings.showLogoutButton) {
+      result.push(
+        h('div.logout-link', [
+          h('ul.menu-links',
+            h('li',
+              this.attach('link', {
+                action: 'logout',
+                className: 'logout',
+                icon: 'sign-out',
+                label: 'user.log_out'
+              })
+            )
+          )
+        ]),
+      );
+    }
+
+    if (this.state.hasUnread) {
+      result.push(this.attach('user-menu-dismiss-link'));
+    }
+
+    return result;
+  },
+
+  dismissNotifications() {
+    return this.state.markRead();
+  },
+
+  notificationsLoaded({ notifications, markRead }) {
+    this.state.hasUnread = notifications.filterBy("read", false).length > 0;
+    this.state.markRead = markRead;
   },
 
   html() {
-    return this.attach('menu-panel', { contents: () => this.panelContents() });
+    return this.attach('menu-panel', {
+      maxWidth: this.settings.maxWidth,
+      contents: () => this.panelContents()
+    });
   },
 
   clickOutside() {

@@ -34,7 +34,7 @@ class Badge < ActiveRecord::Base
   NiceShare = 21
   GoodShare = 22
   GreatShare = 23
-  OneYearAnniversary = 24
+  Anniversary = 24
 
   Promoter = 25
   Campaigner = 26
@@ -56,12 +56,21 @@ class Badge < ActiveRecord::Base
   GivesBack = 32
   Empathetic = 39
 
+  Enthusiast = 45
+  Aficionado = 46
+  Devotee = 47
+
+  NewUserOfTheMonth = 44
+
   # other consts
   AutobiographerMinBioLength = 10
 
+  # used by serializer
+  attr_accessor :has_badge
+
   def self.trigger_hash
     Hash[*(
-      Badge::Trigger.constants.map{|k|
+      Badge::Trigger.constants.map { |k|
         [k.to_s.underscore, Badge::Trigger.const_get(k)]
       }.flatten
     )]
@@ -98,7 +107,7 @@ class Badge < ActiveRecord::Base
   validates :allow_title, inclusion: [true, false]
   validates :multiple_grant, inclusion: [true, false]
 
-  scope :enabled, ->{ where(enabled: true) }
+  scope :enabled, -> { where(enabled: true) }
 
   before_create :ensure_not_system
 
@@ -130,12 +139,24 @@ class Badge < ActiveRecord::Base
     exec_sql <<-SQL.squish
       DELETE FROM user_badges
             USING user_badges ub
-       LEFT JOIN users u ON u.id = ub.user_id
-           WHERE u.id IS NULL
-           AND user_badges.id = ub.id
+        LEFT JOIN users u ON u.id = ub.user_id
+            WHERE u.id IS NULL
+              AND user_badges.id = ub.id
     SQL
 
-    Badge.find_each(&:reset_grant_count!)
+    exec_sql <<-SQL.squish
+      WITH X AS (
+          SELECT badge_id
+               , COUNT(user_id) users
+            FROM user_badges
+        GROUP BY badge_id
+      )
+      UPDATE badges
+         SET grant_count = X.users
+        FROM X
+       WHERE id = X.badge_id
+         AND grant_count <> X.users
+    SQL
   end
 
   def awarded_for_trust_level?
@@ -176,7 +197,7 @@ class Badge < ActiveRecord::Base
 
   def long_description
     key = "badges.#{i18n_name}.long_description"
-    I18n.t(key, default: self[:long_description] || '')
+    I18n.t(key, default: self[:long_description] || '', base_uri: Discourse.base_uri)
   end
 
   def long_description=(val)
@@ -186,7 +207,7 @@ class Badge < ActiveRecord::Base
 
   def description
     key = "badges.#{i18n_name}.description"
-    I18n.t(key, default: self[:description] || '')
+    I18n.t(key, default: self[:description] || '', base_uri: Discourse.base_uri)
   end
 
   def description=(val)
@@ -194,9 +215,12 @@ class Badge < ActiveRecord::Base
     val
   end
 
-
   def slug
     Slug.for(self.display_name, '-')
+  end
+
+  def manually_grantable?
+    query.blank? && !system?
   end
 
   protected
@@ -216,7 +240,7 @@ end
 # Table name: badges
 #
 #  id                :integer          not null, primary key
-#  name              :string           not null
+#  name              :string(255)      not null
 #  description       :text
 #  badge_type_id     :integer          not null
 #  grant_count       :integer          default(0), not null
@@ -224,7 +248,7 @@ end
 #  updated_at        :datetime         not null
 #  allow_title       :boolean          default(FALSE), not null
 #  multiple_grant    :boolean          default(FALSE), not null
-#  icon              :string           default("fa-certificate")
+#  icon              :string(255)      default("fa-certificate")
 #  listable          :boolean          default(TRUE)
 #  target_posts      :boolean          default(FALSE)
 #  query             :text
@@ -239,6 +263,5 @@ end
 #
 # Indexes
 #
-#  index_badges_on_badge_type_id  (badge_type_id)
-#  index_badges_on_name           (name) UNIQUE
+#  index_badges_on_name  (name) UNIQUE
 #

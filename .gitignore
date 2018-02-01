@@ -10,6 +10,8 @@ dump.rdb
 
 bin/*
 
+data/
+
 .sass-cache/*
 public/csv/*
 public/plugins/*
@@ -34,12 +36,15 @@ config/discourse.conf
 *.sql.gz
 /db/*.sqlite3
 /db/structure.sql
+/db/schema.rb
 
 # Ignore all logfiles and tempfiles.
 /log/*.log
 /tmp
 /logfile
 log/
+bootsnap-load-path-cache
+bootsnap-compile-cache/
 
 # Ignore plugins except for the bundled ones.
 /plugins/*
@@ -48,6 +53,8 @@ log/
 !/plugins/poll/
 !/plugins/discourse-details/
 !/plugins/discourse-nginx-performance-report
+!/plugins/discourse-narrative-bot
+!/plugins/discourse-presence
 /plugins/*/auto_generated/
 
 /spec/fixtures/plugins/my_plugin/auto_generated
@@ -110,5 +117,12 @@ bundler_stubs/*
 vendor/bundle/*
 *.db
 
-#ignore jetbrains ide file
+# ignore jetbrains ide file
 *.iml
+
+# vim swap
+*.swn
+
+# ignore nodejs files
+/node_modules
+/package-lock.json

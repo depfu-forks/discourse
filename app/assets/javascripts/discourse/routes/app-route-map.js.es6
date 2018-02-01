@@ -1,6 +1,7 @@
 export default function() {
   // Error page
   this.route('exception', { path: '/exception' });
+  this.route('exception-unknown', { path: '/404' });
 
   this.route('about', { path: '/about', resetNamespace: true });
 
@@ -9,7 +10,8 @@ export default function() {
     this.route('fromParams', { path: '/' });
     this.route('fromParamsNear', { path: '/:nearPost' });
   });
-  this.route('topicBySlug', { path: '/t/:slug', resetNamespace: true });
+
+  this.route('topicBySlugOrId', { path: '/t/:slugOrId', resetNamespace: true });
   this.route('topicUnsubscribe', { path: '/t/:slug/:id/unsubscribe' });
 
   this.route('discovery', { path: '/', resetNamespace: true }, function() {
@@ -62,9 +64,13 @@ export default function() {
   });
 
   // User routes
-  this.route('users', { resetNamespace: true });
-  this.route('password-reset', { path: '/users/password-reset/:token' });
-  this.route('user', { path: '/users/:username', resetNamespace: true }, function() {
+  this.route('users', { resetNamespace: true, path: '/u' });
+  this.route('password-reset', { path: '/u/password-reset/:token' });
+  this.route('account-created', { path: '/u/account-created' }, function() {
+    this.route('resent');
+    this.route('edit-email');
+  });
+  this.route('user', { path: '/u/:username', resetNamespace: true }, function() {
     this.route('summary');
     this.route('userActivity', { path: '/activity', resetNamespace: true }, function() {
       this.route('topics');
@@ -93,6 +99,15 @@ export default function() {
     });
 
     this.route('preferences', { resetNamespace: true }, function() {
+      this.route('account');
+      this.route('profile');
+      this.route('emails');
+      this.route('notifications');
+      this.route('categories');
+      this.route('tags');
+      this.route('interface');
+      this.route('apps');
+
       this.route('username');
       this.route('email');
       this.route('about', { path: '/about-me' });

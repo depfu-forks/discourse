@@ -2,7 +2,7 @@
 
 .btn-social {
   width: 150px;
-  font-size: 1.143em;
+  font-size: $font-up-1;
   overflow: hidden;
   white-space: nowrap;
 }
@@ -16,11 +16,11 @@
 
 #login-form {
   a {
-    color: dark-light-choose(scale-color($primary, $lightness: 35%), scale-color($secondary, $lightness: 65%));
+    color: dark-light-choose($primary-high, $secondary-low);
   }
   label { float: left; display: block; }
   textarea, input, select {
-    font-size: 1.143em;
+    font-size: $font-up-1;
     clear: left;
     margin-top: 0;
     }
@@ -37,7 +37,12 @@ a#new-account-link { white-space:nowrap; }
 
 a#forgot-password-link {clear: left; float: left; }
 
-.btn-primary {margin-bottom: 10px; font-size: 15; float: left;}
+.login-modal, .create-account {
+  .btn-primary {
+    margin-bottom: 10px;
+    float: left;
+  }
+}
 
 
 $label-width: 85px;
@@ -53,7 +58,7 @@ $input-width: 184px;
 
   tr.instructions {
     label {
-      color: dark-light-choose(scale-color($primary, $lightness: 50%), scale-color($secondary, $lightness: 50%));
+      color: dark-light-choose($primary-medium, $secondary-medium);
     }
   }
 
@@ -65,12 +70,18 @@ $input-width: 184px;
 }
 
 .create-account {
+  .user-fields {
+    margin-top: 10px;
+    padding-top: 15px;
+    border-top: 1px solid #e9e9e9;
+  }
+
   .user-field.confirm {
     margin-top: 10px;
     margin-bottom: 10px;
   }
+  
   .user-field {
-    margin-top: 10px;
     label {
       width: $label-width;
     }

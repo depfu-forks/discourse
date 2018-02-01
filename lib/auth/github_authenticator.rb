@@ -42,15 +42,11 @@ class Auth::GithubAuthenticator < Auth::Authenticator
       # need to know.
       user = user_info.user
       result.email = data[:email],
-      result.email_valid = !!data[:email_verified]
+      result.email_valid = data[:email].present?
     else
       # Potentially use *any* of the emails from GitHub to find a match or
       # register a new user, with preference given to the primary email.
       all_emails = Array.new(auth_token[:extra][:all_emails])
-      all_emails.unshift({
-          :email => data[:email],
-          :verified => !!data[:email_verified]
-      })
 
       # Only consider verified emails to match an existing user.  We don't want
       # someone to be able to create a GitHub account with an unverified email
@@ -93,6 +89,8 @@ class Auth::GithubAuthenticator < Auth::Authenticator
       end
     end
 
+    retrieve_avatar(user, data)
+
     result.user = user
     result
   end
@@ -104,16 +102,25 @@ class Auth::GithubAuthenticator < Auth::Authenticator
       screen_name: data[:github_screen_name],
       github_user_id: data[:github_user_id]
     )
-  end
 
+    retrieve_avatar(user, data)
+  end
 
   def register_middleware(omniauth)
     omniauth.provider :github,
-           :setup => lambda { |env|
-              strategy = env["omniauth.strategy"]
+           setup: lambda { |env|
+             strategy = env["omniauth.strategy"]
               strategy.options[:client_id] = SiteSetting.github_client_id
               strategy.options[:client_secret] = SiteSetting.github_client_secret
            },
-           :scope => "user:email"
+           scope: "user:email"
+  end
+
+  private
+
+  def retrieve_avatar(user, data)
+    return unless data[:image].present? && user && user.user_avatar&.custom_upload_id.blank?
+
+    Jobs.enqueue(:download_avatar_from_url, url: data[:image], user_id: user.id, override_gravatar: false)
   end
 end

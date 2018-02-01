@@ -38,7 +38,7 @@ export function buildResolver(baseName) {
     resolveRouter(parsedName) {
       const routerPath = `${baseName}/router`;
       if (requirejs.entries[routerPath]) {
-        const module = require(routerPath, null, null, true);
+        const module = requirejs(routerPath, null, null, true);
         return module.default;
       }
       return this._super(parsedName);
@@ -79,7 +79,7 @@ export function buildResolver(baseName) {
 
       var module;
       if (moduleName) {
-        module = require(moduleName, null, null, true /* force sync */);
+        module = requirejs(moduleName, null, null, true /* force sync */);
         if (module && module['default']) { module = module['default']; }
       }
       return module;
@@ -134,7 +134,6 @@ export function buildResolver(baseName) {
       if (full.indexOf('connectors') === 0) {
         return Ember.TEMPLATES[`javascripts/${full}`];
       }
-
     },
 
     resolveTemplate(parsedName) {
@@ -195,9 +194,9 @@ export function buildResolver(baseName) {
     // (similar to how discourse lays out templates)
     findAdminTemplate(parsedName) {
       var decamelized = parsedName.fullNameWithoutType.decamelize();
-
       if (decamelized.indexOf('components') === 0) {
-        const compTemplate = Ember.TEMPLATES['admin/templates/' + decamelized];
+        let comPath = `admin/templates/${decamelized}`;
+        const compTemplate = Ember.TEMPLATES[`javascripts/${comPath}`] || Ember.TEMPLATES[comPath];
         if (compTemplate) { return compTemplate; }
       }
 

@@ -39,7 +39,7 @@ export default Ember.Component.extend({
     } else {
       const $linkForTouch = $('#share-link .share-for-touch a');
       $linkForTouch.attr('href', link);
-      $linkForTouch.html(link);
+      $linkForTouch.text(link);
       const range = window.document.createRange();
       range.selectNode($linkForTouch[0]);
       window.getSelection().addRange(range);
@@ -81,6 +81,14 @@ export default Ember.Component.extend({
     Ember.run.scheduleOnce('afterRender', this, this._focusUrl);
   },
 
+  _webShare(url) {
+    // We can pass title and text too, but most share targets do their own oneboxing
+    navigator.share({
+      url: url
+    })
+    .catch((error) => console.warn('Error sharing', error));
+  },
+
   didInsertElement() {
     this._super();
 
@@ -93,7 +101,7 @@ export default Ember.Component.extend({
       return true;
     });
 
-    $html.on('click.discoure-share-link', '[data-share-url]', e => {
+    $html.on('click.discourse-share-link', 'button[data-share-url], .post-info .post-date[data-share-url]', e => {
       // if they want to open in a new tab, let it so
       if (wantsNewWindow(e)) { return true; }
 
@@ -106,7 +114,15 @@ export default Ember.Component.extend({
       const date = $currentTarget.children().data('time');
 
       this.setProperties({ postNumber, date, postId });
-      this._showUrl($currentTarget, url);
+
+      // use native webshare only when the user clicks on the "chain" icon
+      // navigator.share needs HTTPS, returns undefined on HTTP
+      if (navigator.share && !$currentTarget.hasClass('post-date')) {
+        this._webShare(url);
+      } else {
+        this._showUrl($currentTarget, url);
+      }
+
       return false;
     });
 
@@ -121,7 +137,7 @@ export default Ember.Component.extend({
 
   willDestroyElement() {
     this._super();
-    $('html').off('click.discoure-share-link')
+    $('html').off('click.discourse-share-link')
              .off('mousedown.outside-share-link')
              .off('keydown.share-view');
   },

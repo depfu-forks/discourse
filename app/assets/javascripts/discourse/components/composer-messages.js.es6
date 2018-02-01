@@ -1,5 +1,7 @@
 import LinkLookup from 'discourse/lib/link-lookup';
 
+let _messagesCache = {};
+
 export default Ember.Component.extend({
   classNameBindings: [':composer-popup-container', 'hidden'],
   checkedMessages: false,
@@ -119,18 +121,15 @@ export default Ember.Component.extend({
     // We don't care about similar topics unless creating a topic
     if (!composer.get('creatingTopic')) { return; }
 
-    const origBody = composer.get('reply') || '';
+    // TODO pass the 200 in from somewhere
+    const raw = (composer.get('reply') || '').substr(0, 200);
     const title = composer.get('title') || '';
 
-    // Ensure the fields are of the minimum length
-    if (origBody.length < Discourse.SiteSettings.min_body_similar_length) { return; }
-    if (title.length < Discourse.SiteSettings.min_title_similar_length) { return; }
-
-    // TODO pass the 200 in from somewhere
-    const body = origBody.substr(0, 200);
+    // Ensure we have at least a title
+    if (title.length < this.siteSettings.min_title_similar_length) { return; }
 
     // Don't search over and over
-    const concat = title + body;
+    const concat = title + raw;
     if (concat === this._lastSimilaritySearch) { return; }
     this._lastSimilaritySearch = concat;
 
@@ -143,9 +142,9 @@ export default Ember.Component.extend({
 
     this._similarTopicsMessage = message;
 
-    composer.store.find('similar-topic', {title, raw: body}).then(newTopics => {
+    composer.store.find('similar-topic', { title, raw }).then(topics => {
       similarTopics.clear();
-      similarTopics.pushObjects(newTopics.get('content'));
+      similarTopics.pushObjects(topics.get('content'));
 
       if (similarTopics.get('length') > 0) {
         message.set('similarTopics', similarTopics);
@@ -168,8 +167,10 @@ export default Ember.Component.extend({
     if (topicId) { args.topic_id = topicId; }
     if (postId)  { args.post_id = postId; }
 
-    const queuedForTyping = this.get('queuedForTyping');
-    composer.store.find('composer-message', args).then(messages => {
+    const cacheKey = `${args.composer_action}${args.topic_id}${args.post_id}`;
+
+    const processMessages = messages => {
+      if (this.isDestroying || this.isDestroyed) { return; }
 
       // Checking composer messages on replies can give us a list of links to check for
       // duplicates
@@ -178,7 +179,17 @@ export default Ember.Component.extend({
       }
 
       this.set('checkedMessages', true);
+      const queuedForTyping = this.get('queuedForTyping');
       messages.forEach(msg => msg.wait_for_typing ? queuedForTyping.addObject(msg) : this.send('popup', msg));
-    });
+    };
+
+    if (_messagesCache.cacheKey === cacheKey) {
+      processMessages(_messagesCache.messages);
+    } else {
+      composer.store.find('composer-message', args).then(messages => {
+        _messagesCache = {messages, cacheKey};
+        processMessages(messages);
+      });
+    }
   }
 });

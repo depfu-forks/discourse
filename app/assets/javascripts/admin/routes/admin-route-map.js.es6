@@ -15,10 +15,14 @@ export default function() {
     });
 
     this.route('adminCustomize', { path: '/customize', resetNamespace: true } ,function() {
-      this.route('colors');
 
-      this.route('adminCustomizeCssHtml', { path: 'css_html', resetNamespace: true }, function() {
-        this.route('show', {path: '/:site_customization_id/:section'});
+      this.route('colors', function() {
+        this.route('show', {path: '/:scheme_id'});
+      });
+
+      this.route('adminCustomizeThemes', { path: 'themes', resetNamespace: true }, function() {
+        this.route('show', {path: '/:theme_id'});
+        this.route('edit', {path: '/:theme_id/:target/:field_name/edit'});
       });
 
       this.route('adminSiteText', { path: '/site_texts', resetNamespace: true }, function() {
@@ -50,7 +54,11 @@ export default function() {
     this.route('adminReports', { path: '/reports/:type', resetNamespace: true });
 
     this.route('adminFlags', { path: '/flags', resetNamespace: true }, function() {
-      this.route('list', { path: '/:filter' });
+      this.route('postsActive', { path: 'active' });
+      this.route('postsOld', { path: 'old' });
+      this.route('topics', { path: 'topics' }, function() {
+        this.route('show', { path: ":id" });
+      });
     });
 
     this.route('adminLogs', { path: '/logs', resetNamespace: true }, function() {
@@ -58,6 +66,14 @@ export default function() {
       this.route('screenedEmails', { path: '/screened_emails' });
       this.route('screenedIpAddresses', { path: '/screened_ip_addresses' });
       this.route('screenedUrls', { path: '/screened_urls' });
+      this.route('adminSearchLogs', { path: '/search_logs', resetNamespace: true}, function() {
+        this.route('index', { path: '/' });
+        this.route('term', { path: '/term/:term' });
+      });
+      this.route('adminWatchedWords', { path: '/watched_words', resetNamespace: true}, function() {
+        this.route('index', { path: '/' });
+        this.route('action', { path: '/action/:action_id' });
+      });
     });
 
     this.route('adminGroups', { path: '/groups', resetNamespace: true }, function() {

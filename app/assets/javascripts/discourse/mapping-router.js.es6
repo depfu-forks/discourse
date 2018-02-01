@@ -1,4 +1,6 @@
 import { defaultHomepage } from 'discourse/lib/utilities';
+import { rewritePath } from 'discourse/lib/url';
+
 const rootURL = Discourse.BaseUri;
 
 const BareRouter = Ember.Router.extend({
@@ -6,6 +8,7 @@ const BareRouter = Ember.Router.extend({
   location: Ember.testing ? 'none': 'discourse-location',
 
   handleURL(url) {
+    url = rewritePath(url);
     const params = url.split('?');
 
     if (params[0] === "/") {
@@ -29,6 +32,7 @@ class RouteNode {
     this.children = [];
     this.childrenByName = {};
     this.paths = {};
+    this.site = Discourse.Site.current();
 
     if (!opts.path) {
       opts.path = name;
@@ -69,21 +73,10 @@ class RouteNode {
     if (this.name === 'root') {
       children.forEach(c => c.mapRoutes(router));
     } else {
-
       const builder = (children.length === 0) ? undefined : function() {
         children.forEach(c => c.mapRoutes(this));
       };
       router.route(this.name, this.opts, builder);
-
-      // We can have multiple paths to the same route
-      const paths = Object.keys(this.paths);
-      if (paths.length > 1) {
-        paths.filter(p => p !== this.opts.path).forEach(path => {
-          const newOpts = jQuery.extend({}, this.opts, { path });
-          console.log(`warning: we can't have duplicate route names anymore`, newOpts);
-          // router.route(this.name, newOpts, builder);
-        });
-      }
     }
   }
 
@@ -114,7 +107,7 @@ export function mapRoutes() {
   // can define admin routes.
   Object.keys(requirejs._eak_seen).forEach(function(key) {
     if (/route-map$/.test(key)) {
-      var module = require(key, null, null, true);
+      var module = requirejs(key, null, null, true);
       if (!module || !module.default) { throw new Error(key + ' must export a route map.'); }
 
       const mapObj = module.default;
@@ -127,7 +120,7 @@ export function mapRoutes() {
   });
 
   extras.forEach(extra => {
-    const node = tree.findPath(extra.resource);
+    let node = tree.findPath(extra.resource);
     if (node) {
       node.extract(extra.map);
     }

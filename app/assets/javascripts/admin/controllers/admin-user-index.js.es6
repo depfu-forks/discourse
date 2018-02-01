@@ -1,8 +1,14 @@
 import { ajax } from 'discourse/lib/ajax';
 import CanCheckEmails from 'discourse/mixins/can-check-emails';
 import { propertyNotEqual, setting } from 'discourse/lib/computed';
+import { userPath } from 'discourse/lib/url';
+import { popupAjaxError } from 'discourse/lib/ajax-error';
+import computed from 'ember-addons/ember-computed-decorators';
 
 export default Ember.Controller.extend(CanCheckEmails, {
+  adminTools: Ember.inject.service(),
+  editingUsername: false,
+  editingName: false,
   editingTitle: false,
   originalPrimaryGroupId: null,
   availableGroups: null,
@@ -30,6 +36,11 @@ export default Ember.Controller.extend(CanCheckEmails, {
     return [];
   }.property('model.user_fields.[]'),
 
+  @computed('model.username_lower')
+  preferencesPath(username) {
+    return userPath(`${username}/preferences`);
+  },
+
   actions: {
 
     impersonate() { return this.get("model").impersonate(); },
@@ -47,12 +58,66 @@ export default Ember.Controller.extend(CanCheckEmails, {
     saveTrustLevel() { return this.get("model").saveTrustLevel(); },
     restoreTrustLevel() { return this.get("model").restoreTrustLevel(); },
     lockTrustLevel(locked) { return this.get("model").lockTrustLevel(locked); },
-    unsuspend() { return this.get("model").unsuspend(); },
-    unblock() { return this.get("model").unblock(); },
-    block() { return this.get("model").block(); },
+    unsilence() { return this.get("model").unsilence(); },
+    silence() { return this.get("model").silence(); },
     deleteAllPosts() { return this.get("model").deleteAllPosts(); },
     anonymize() { return this.get('model').anonymize(); },
     destroy() { return this.get('model').destroy(); },
+
+    viewActionLogs() {
+      this.get('adminTools').showActionLogs(this, {
+        target_user: this.get('model.username'),
+      });
+    },
+
+    showFlagsReceived() {
+      this.get('adminTools').showFlagsReceived(this.get('model'));
+    },
+    showSuspendModal() {
+      this.get('adminTools').showSuspendModal(this.get('model'));
+    },
+    unsuspend() {
+      this.get("model").unsuspend().catch(popupAjaxError);
+    },
+    showSilenceModal() {
+      this.get('adminTools').showSilenceModal(this.get('model'));
+    },
+
+    toggleUsernameEdit() {
+      this.set('userUsernameValue', this.get('model.username'));
+      this.toggleProperty('editingUsername');
+    },
+
+    saveUsername() {
+      const oldUsername = this.get('model.username');
+      this.set('model.username', this.get('userUsernameValue'));
+
+      return ajax(`/users/${oldUsername.toLowerCase()}/preferences/username`, {
+        data: { new_username: this.get('userUsernameValue') },
+        type: 'PUT'
+      }).catch(e => {
+        this.set('model.username', oldUsername);
+        popupAjaxError(e);
+      }).finally(() => this.toggleProperty('editingUsername'));
+    },
+
+    toggleNameEdit() {
+      this.set('userNameValue', this.get('model.name'));
+      this.toggleProperty('editingName');
+    },
+
+    saveName() {
+      const oldName = this.get('model.name');
+      this.set('model.name', this.get('userNameValue'));
+
+      return ajax(userPath(`${this.get('model.username').toLowerCase()}.json`), {
+        data: { name: this.get('userNameValue') },
+        type: 'PUT'
+      }).catch(e => {
+        this.set('model.name', oldName);
+        popupAjaxError(e);
+      }).finally(() => this.toggleProperty('editingName'));
+    },
 
     toggleTitleEdit() {
       this.set('userTitleValue', this.get('model.title'));
@@ -60,17 +125,16 @@ export default Ember.Controller.extend(CanCheckEmails, {
     },
 
     saveTitle() {
-      const self = this;
+      const prevTitle = this.get('userTitleValue');
 
-      return ajax(`/users/${this.get('model.username').toLowerCase()}.json`, {
+      this.set('model.title', this.get('userTitleValue'));
+      return ajax(userPath(`${this.get('model.username').toLowerCase()}.json`), {
         data: {title: this.get('userTitleValue')},
         type: 'PUT'
-      }).catch(function(e) {
-        bootbox.alert(I18n.t("generic_error_with_reason", {error: "http: " + e.status + " - " + e.body}));
-      }).finally(function() {
-        self.set('model.title', self.get('userTitleValue'));
-        self.toggleProperty('editingTitle');
-      });
+      }).catch(e => {
+        this.set('model.title', prevTitle);
+        popupAjaxError(e);
+      }).finally(() => this.toggleProperty('editingTitle'));
     },
 
     generateApiKey() {

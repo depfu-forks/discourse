@@ -4,29 +4,38 @@ describe Onebox::Engine::DiscourseLocalOnebox do
 
   before { SiteSetting.external_system_avatars_enabled = false }
 
+  def build_link(url)
+    %|<a href="#{url}" rel="nofollow noopener">#{url}</a>|
+  end
+
   context "for a link to a post" do
     let(:post)  { Fabricate(:post) }
     let(:post2) { Fabricate(:post, topic: post.topic, post_number: 2) }
 
     it "returns a link if post isn't found" do
       url = "#{Discourse.base_url}/t/not-exist/3/2"
-      expect(Onebox.preview(url).to_s).to eq(%|<a href="#{url}">#{url}</a>|)
+      expect(Onebox.preview(url).to_s).to eq(build_link(url))
     end
 
     it "returns a link if not allowed to see the post" do
       url = "#{Discourse.base_url}#{post2.url}"
       Guardian.any_instance.expects(:can_see_post?).returns(false)
-      expect(Onebox.preview(url).to_s).to eq(%|<a href="#{url}">#{url}</a>|)
+      expect(Onebox.preview(url).to_s).to eq(build_link(url))
     end
 
     it "returns a link if post is hidden" do
       hidden_post = Fabricate(:post, topic: post.topic, post_number: 2, hidden: true, hidden_reason_id: Post.hidden_reasons[:flag_threshold_reached])
       url = "#{Discourse.base_url}#{hidden_post.url}"
-      expect(Onebox.preview(url).to_s).to eq(%|<a href="#{url}">#{url}</a>|)
+      expect(Onebox.preview(url).to_s).to eq(build_link(url))
     end
 
     it "returns some onebox goodness if post exists and can be seen" do
-      url = "#{Discourse.base_url}#{post2.url}?source_topic_id=#{post2.topic_id+1}"
+      url = "#{Discourse.base_url}#{post2.url}?source_topic_id=#{post2.topic_id + 1}"
+      html = Onebox.preview(url).to_s
+      expect(html).to include(post2.excerpt)
+      expect(html).to include(post2.topic.title)
+
+      url = "#{Discourse.base_url}#{post2.url}/?source_topic_id=#{post2.topic_id + 1}"
       html = Onebox.preview(url).to_s
       expect(html).to include(post2.excerpt)
       expect(html).to include(post2.topic.title)
@@ -43,13 +52,13 @@ describe Onebox::Engine::DiscourseLocalOnebox do
 
     it "returns a link if topic isn't found" do
       url = "#{Discourse.base_url}/t/not-found/123"
-      expect(Onebox.preview(url).to_s).to eq(%|<a href="#{url}">#{url}</a>|)
+      expect(Onebox.preview(url).to_s).to eq(build_link(url))
     end
 
     it "returns a link if not allowed to see the topic" do
       url = topic.url
       Guardian.any_instance.expects(:can_see_topic?).returns(false)
-      expect(Onebox.preview(url).to_s).to eq(%|<a href="#{url}">#{url}</a>|)
+      expect(Onebox.preview(url).to_s).to eq(build_link(url))
     end
 
     it "replaces emoji in the title" do
@@ -61,6 +70,27 @@ describe Onebox::Engine::DiscourseLocalOnebox do
       html = Onebox.preview(topic.url).to_s
       expect(html).to include(topic.ordered_posts.first.user.username)
       expect(html).to include("<blockquote>")
+
+      html = Onebox.preview("#{topic.url}/?u=codinghorror").to_s
+      expect(html).to include(topic.ordered_posts.first.user.username)
+      expect(html).to include("<blockquote>")
+    end
+  end
+
+  context "for a link to a user profile" do
+    let(:user)   { Fabricate(:user) }
+
+    it "returns a link if user isn't found" do
+      url = "#{Discourse.base_url}/u/none"
+      expect(Onebox.preview(url).to_s).to eq(build_link(url))
+    end
+
+    it "returns some onebox goodness if user exists" do
+      html = Onebox.preview("#{Discourse.base_url}/u/#{user.username}").to_s
+      expect(html).to include(user.username)
+      expect(html).to include(user.name)
+      expect(html).to include(user.created_at.strftime("%B %-d, %Y"))
+      expect(html).to include('<aside class="onebox">')
     end
   end
 
@@ -71,7 +101,7 @@ describe Onebox::Engine::DiscourseLocalOnebox do
 
     it "returns nil if file type is not audio or video" do
       url = "#{Discourse.base_url}#{path}.pdf"
-      FakeWeb.register_uri(:get, url, body: "")
+      stub_request(:get, url).to_return(body: '')
       expect(Onebox.preview(url).to_s).to eq("")
     end
 
@@ -80,13 +110,13 @@ describe Onebox::Engine::DiscourseLocalOnebox do
       html = Onebox.preview(url).to_s
       # </source> will be removed by the browser
       # need to fix https://github.com/rubys/nokogumbo/issues/14
-      expect(html).to eq(%|<audio controls=""><source src="#{url}"></source><a href="#{url}">#{url}</a></audio>|)
+      expect(html).to eq(%|<audio controls=""><source src="#{url}"></source>#{build_link(url)}</audio>|)
     end
 
     it "returns some onebox goodness for video file" do
       url = "#{Discourse.base_url}#{path}.mov"
       html = Onebox.preview(url).to_s
-      expect(html).to eq(%|<video width="100%" height="100%" controls=""><source src="#{url}"></source><a href="#{url}">#{url}</a></video>|)
+      expect(html).to eq(%|<video width="100%" height="100%" controls=""><source src="#{url}"></source>#{build_link(url)}</video>|)
     end
   end
 
@@ -104,7 +134,7 @@ describe Onebox::Engine::DiscourseLocalOnebox do
       let(:post2) { Fabricate(:post, topic: post.topic, post_number: 2) }
 
       it "returns some onebox goodness if post exists and can be seen" do
-        url = "#{Discourse.base_url}#{post2.url}?source_topic_id=#{post2.topic_id+1}"
+        url = "#{Discourse.base_url}#{post2.url}?source_topic_id=#{post2.topic_id + 1}"
         html = Onebox.preview(url).to_s
         expect(html).to include(post2.excerpt)
         expect(html).to include(post2.topic.title)

@@ -25,7 +25,7 @@ export default Ember.Mixin.create({
     this.set('uniqueUsernameValidation', null);
 
 
-    if (accountUsername === this.get('prefilledUsername')) {
+    if (accountUsername && accountUsername === this.get('prefilledUsername')) {
       return InputValidation.create({
         ok: true,
         reason: I18n.t('user.username.prefilled')
@@ -40,7 +40,7 @@ export default Ember.Mixin.create({
     }
 
     // If too short
-    if (accountUsername.length < Discourse.SiteSettings.min_username_length) {
+    if (accountUsername.length < this.siteSettings.min_username_length) {
       return InputValidation.create({
         failed: true,
         reason: I18n.t('user.username.too_short')

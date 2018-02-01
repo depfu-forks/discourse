@@ -1,17 +1,25 @@
 class WebHookPostSerializer < PostSerializer
-  def include_can_edit?
-    false
+
+  attributes :topic_posts_count
+
+  def include_topic_title?
+    true
   end
 
-  def can_delete
-    false
+  %i{
+    can_view
+    can_edit
+    can_delete
+    can_recover
+    can_wiki
+  }.each do |attr|
+    define_method("include_#{attr}?") do
+      false
+    end
   end
 
-  def can_recover
-    false
+  def topic_posts_count
+    object.topic ? object.topic.posts_count : 0
   end
 
-  def can_wiki
-    false
-  end
 end

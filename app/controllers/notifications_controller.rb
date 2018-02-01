@@ -2,11 +2,17 @@ require_dependency 'notification_serializer'
 
 class NotificationsController < ApplicationController
 
-  before_filter :ensure_logged_in
+  requires_login
 
   def index
-    user = current_user
-    user = User.find_by_username(params[:username].to_s) if params[:username]
+    user =
+      if params[:username] && !params[:recent]
+        user_record = User.find_by(username: params[:username].to_s)
+        raise Discourse::NotFound if !user_record
+        user_record
+      else
+        current_user
+      end
 
     guardian.ensure_can_see_notifications!(user)
 
@@ -31,9 +37,9 @@ class NotificationsController < ApplicationController
       offset = params[:offset].to_i
 
       notifications = Notification.where(user_id: user.id)
-                                  .visible
-                                  .includes(:topic)
-                                  .order(created_at: :desc)
+        .visible
+        .includes(:topic)
+        .order(created_at: :desc)
 
       total_rows = notifications.dup.count
       notifications = notifications.offset(offset).limit(60)

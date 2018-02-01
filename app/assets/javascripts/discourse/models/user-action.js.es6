@@ -1,9 +1,9 @@
 import RestModel from 'discourse/models/rest';
-import { url } from 'discourse/lib/computed';
 import { on } from 'ember-addons/ember-computed-decorators';
 import computed from 'ember-addons/ember-computed-decorators';
 import UserActionGroup from 'discourse/models/user-action-group';
 import { postUrl } from 'discourse/lib/utilities';
+import { userPath } from 'discourse/lib/url';
 
 const UserActionTypes = {
   likes_given: 1,
@@ -79,14 +79,21 @@ const UserAction = RestModel.extend({
   presentName: Ember.computed.or('name', 'username'),
   targetDisplayName: Ember.computed.or('target_name', 'target_username'),
   actingDisplayName: Ember.computed.or('acting_name', 'acting_username'),
-  targetUserUrl: url('target_username', '/users/%@'),
+
+  @computed('target_username')
+  targetUserUrl(username) {
+    return userPath(username);
+  },
 
   @computed("username")
   usernameLower(username) {
     return username.toLowerCase();
   },
 
-  userUrl: url('usernameLower', '/users/%@'),
+  @computed('usernameLower')
+  userUrl(usernameLower) {
+    return userPath(usernameLower);
+  },
 
   @computed()
   postUrl() {
@@ -113,10 +120,10 @@ const UserAction = RestModel.extend({
     let groups = this.get("childGroups");
     if (!groups) {
       groups = {
-        likes: UserActionGroup.create({ icon: "fa fa-heart" }),
-        stars: UserActionGroup.create({ icon: "fa fa-star" }),
-        edits: UserActionGroup.create({ icon: "fa fa-pencil" }),
-        bookmarks: UserActionGroup.create({ icon: "fa fa-bookmark" })
+        likes: UserActionGroup.create({ icon: "heart" }),
+        stars: UserActionGroup.create({ icon: "star" }),
+        edits: UserActionGroup.create({ icon: "pencil" }),
+        bookmarks: UserActionGroup.create({ icon: "bookmark" })
       };
     }
     this.set("childGroups", groups);

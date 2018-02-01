@@ -12,10 +12,6 @@ const DiscoveryCategoriesRoute = Discourse.Route.extend(OpenComposer, {
     this.render("discovery/categories", { outlet: "list-container" });
   },
 
-  beforeModel() {
-    this.controllerFor("navigation/categories").set("filterMode", "categories");
-  },
-
   model() {
     const style = !this.site.mobileView && this.siteSettings.desktop_category_page_style;
     const parentCategory = this.get("model.parentCategory");
@@ -81,7 +77,7 @@ const DiscoveryCategoriesRoute = Discourse.Route.extend(OpenComposer, {
     controller.set("model", model);
 
     this.controllerFor("navigation/categories").setProperties({
-      canCreateCategory: model.get("can_create_category"),
+      showCategoryAdmin: model.get("can_create_category"),
       canCreateTopic: model.get("can_create_topic"),
     });
 
@@ -92,14 +88,15 @@ const DiscoveryCategoriesRoute = Discourse.Route.extend(OpenComposer, {
 
     refresh() {
       const controller = this.controllerFor("discovery/categories");
+      const discController = this.controllerFor("discovery");
 
       // Don't refresh if we're still loading
-      if (!controller || controller.get("loading")) { return; }
+      if (!discController || discController.get("loading")) { return; }
 
       // If we `send('loading')` here, due to returning true it bubbles up to the
       // router and ember throws an error due to missing `handlerInfos`.
       // Lesson learned: Don't call `loading` yourself.
-      controller.set("loading", true);
+      discController.set("loading", true);
 
       this.model().then(model => {
         this.setupController(controller, model);

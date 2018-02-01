@@ -31,13 +31,17 @@ class AdminDashboardData
 
   USER_REPORTS ||= ['users_by_trust_level']
 
-  MOBILE_REPORTS ||= ['mobile_visits'] + ApplicationRequest.req_types.keys.select {|r| r =~ /mobile/}.map { |r| r + "_reqs" }
+  MOBILE_REPORTS ||= ['mobile_visits'] + ApplicationRequest.req_types.keys.select { |r| r =~ /mobile/ }.map { |r| r + "_reqs" }
 
   def self.add_problem_check(*syms, &blk)
     @problem_syms.push(*syms) if syms
     @problem_blocks << blk if blk
   end
   class << self; attr_reader :problem_syms, :problem_blocks, :problem_messages; end
+
+  def initialize(opts = {})
+    @opts = opts
+  end
 
   def problems
     problems = []
@@ -90,7 +94,7 @@ class AdminDashboardData
       'dashboard.poll_pop3_auth_error'
     ]
 
-    add_problem_check :rails_env_check, :host_names_check,
+    add_problem_check :rails_env_check, :host_names_check, :force_https_check,
                       :ram_check, :google_oauth2_config_check,
                       :facebook_config_check, :twitter_config_check,
                       :github_config_check, :s3_config_check, :image_magick_check,
@@ -112,15 +116,15 @@ class AdminDashboardData
     'dash-stats'
   end
 
-  def self.fetch_problems
-    AdminDashboardData.new.problems
+  def self.fetch_problems(opts = {})
+    AdminDashboardData.new(opts).problems
   end
 
   def self.problem_message_check(i18n_key)
     $redis.get(problem_message_key(i18n_key)) ? I18n.t(i18n_key) : nil
   end
 
-  def self.add_problem_message(i18n_key, expire_seconds=nil)
+  def self.add_problem_message(i18n_key, expire_seconds = nil)
     if expire_seconds.to_i > 0
       $redis.setex problem_message_key(i18n_key), expire_seconds.to_i, 1
     else
@@ -147,7 +151,7 @@ class AdminDashboardData
       admins: User.admins.count,
       moderators: User.moderators.count,
       suspended: User.suspended.count,
-      blocked: User.blocked.count,
+      silenced: User.silenced.count,
       top_referrers: IncomingLinksReport.find('top_referrers').as_json,
       top_traffic_sources: IncomingLinksReport.find('top_traffic_sources').as_json,
       top_referred_topics: IncomingLinksReport.find('top_referred_topics').as_json,
@@ -232,6 +236,11 @@ class AdminDashboardData
     return unless ActionMailer::Base.smtp_settings[:address]["smtp.mailgun.org"]
     return unless SiteSetting.mailgun_api_key.blank?
     I18n.t('dashboard.missing_mailgun_api_key')
+  end
+
+  def force_https_check
+    return unless @opts[:check_force_https]
+    I18n.t('dashboard.force_https_warning') unless SiteSetting.force_https
   end
 
 end
