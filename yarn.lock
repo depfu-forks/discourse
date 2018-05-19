@@ -227,9 +227,9 @@ chrome-launcher@^0.10.0:
     mkdirp "0.5.1"
     rimraf "^2.6.1"
 
-chrome-remote-interface@^0.25.4:
-  version "0.25.4"
-  resolved "https://registry.yarnpkg.com/chrome-remote-interface/-/chrome-remote-interface-0.25.4.tgz#3a84aa9ef053dc2fd25d3b4c30d7501cb5f73883"
+chrome-remote-interface@^0.25.6:
+  version "0.25.6"
+  resolved "https://registry.yarnpkg.com/chrome-remote-interface/-/chrome-remote-interface-0.25.6.tgz#172bc82d87091a2ae90711a7b6c940da64ce32ef"
   dependencies:
     commander "2.11.x"
     ws "3.3.x"

@@ -5,11 +5,12 @@
   "repository": "git@github.com:discourse/discourse.git",
   "author": "Discourse",
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+  },
   "devDependencies": {
     "babel-eslint": "^8.0.3",
     "chrome-launcher": "^0.10.0",
-    "chrome-remote-interface": "^0.25.4",
+    "chrome-remote-interface": "^0.25.6",
     "eslint": "^4.13.1",
     "puppeteer": "^0.13.0"
   }
