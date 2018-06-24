@@ -7,7 +7,7 @@
   "license": "MIT",
   "dependencies": {},
   "devDependencies": {
-    "babel-eslint": "^8.0.3",
+    "babel-eslint": "^8.2.5",
     "chrome-launcher": "^0.10.0",
     "chrome-remote-interface": "^0.25.4",
     "eslint": "^4.13.1",
