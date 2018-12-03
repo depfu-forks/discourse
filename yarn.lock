@@ -227,12 +227,12 @@ chrome-launcher@^0.10.0:
     mkdirp "0.5.1"
     rimraf "^2.6.1"
 
-chrome-remote-interface@^0.25.4:
-  version "0.25.4"
-  resolved "https://registry.yarnpkg.com/chrome-remote-interface/-/chrome-remote-interface-0.25.4.tgz#3a84aa9ef053dc2fd25d3b4c30d7501cb5f73883"
+chrome-remote-interface@^0.27.0:
+  version "0.27.0"
+  resolved "https://registry.yarnpkg.com/chrome-remote-interface/-/chrome-remote-interface-0.27.0.tgz#83a3ecc1f9e4da395aec81fe33963104676726b4"
   dependencies:
     commander "2.11.x"
-    ws "3.3.x"
+    ws "^6.1.0"
 
 circular-json@^0.3.1:
   version "0.3.3"
@@ -998,13 +998,19 @@ write@^0.2.1:
   dependencies:
     mkdirp "^0.5.1"
 
-ws@3.3.x, ws@^3.0.0:
+ws@^3.0.0:
   version "3.3.2"
   resolved "https://registry.yarnpkg.com/ws/-/ws-3.3.2.tgz#96c1d08b3fefda1d5c1e33700d3bfaa9be2d5608"
   dependencies:
     async-limiter "~1.0.0"
     safe-buffer "~5.1.0"
     ultron "~1.1.0"
+
+ws@^6.1.0:
+  version "6.1.2"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-6.1.2.tgz#3cc7462e98792f0ac679424148903ded3b9c3ad8"
+  dependencies:
+    async-limiter "~1.0.0"
 
 yallist@^2.1.2:
   version "2.1.2"
