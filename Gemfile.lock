@@ -337,7 +337,7 @@ GEM
     ruby-ll (2.1.2)
       ansi
       ast
-    ruby-openid (2.7.0)
+    ruby-openid (2.9.2)
     ruby-prof (0.16.2)
     ruby-progressbar (1.9.0)
     ruby-readability (0.7.0)
