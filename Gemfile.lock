@@ -124,7 +124,7 @@ GEM
     flamegraph (0.9.5)
     foreman (0.84.0)
       thor (~> 0.19.1)
-    fspath (3.1.0)
+    fspath (3.1.1)
     gc_tracer (1.5.1)
     globalid (0.4.0)
       activesupport (>= 4.2.0)
